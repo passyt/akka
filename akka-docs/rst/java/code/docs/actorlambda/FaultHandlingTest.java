@@ -3,37 +3,40 @@
  */
 package docs.actorlambda;
 
-//#testkit
 import akka.actor.*;
 
+
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import docs.AbstractJavaTest;
+import static akka.pattern.Patterns.ask;
+import scala.Option;
+
+//#testkit
+import akka.testkit.JavaTestKit;
+import akka.testkit.TestProbe;
+import akka.testkit.ErrorFilter;
+import akka.testkit.EventFilter;
+import akka.testkit.TestEvent;
+import scala.concurrent.duration.Duration;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static akka.japi.Util.immutableSeq;
+import scala.concurrent.Await;
+
+//#testkit
+
+//#supervisor
+import akka.japi.pf.DeciderBuilder;
 import static akka.actor.SupervisorStrategy.resume;
 import static akka.actor.SupervisorStrategy.restart;
 import static akka.actor.SupervisorStrategy.stop;
 import static akka.actor.SupervisorStrategy.escalate;
-import akka.japi.pf.DeciderBuilder;
-import akka.japi.pf.ReceiveBuilder;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import docs.AbstractJavaTest;
-import scala.PartialFunction;
-import scala.concurrent.Await;
-import static akka.pattern.Patterns.ask;
-import scala.concurrent.duration.Duration;
-import akka.testkit.TestProbe;
 
-//#testkit
-import akka.testkit.ErrorFilter;
-import akka.testkit.EventFilter;
-import akka.testkit.TestEvent;
-import akka.testkit.JavaTestKit;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static akka.japi.Util.immutableSeq;
-import scala.Option;
+//#supervisor
 
 import org.junit.Test;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
-import scala.runtime.BoxedUnit;
 
 //#testkit
 public class FaultHandlingTest extends AbstractJavaTest {
@@ -65,12 +68,13 @@ public class FaultHandlingTest extends AbstractJavaTest {
 
     //#strategy
 
-    public Supervisor() {
-      receive(ReceiveBuilder.
-        match(Props.class, props -> {
-          sender().tell(context().actorOf(props), self());
-        }).build()
-      );
+    @Override
+    public Receive initialReceive() {
+      return receiveBuilder()
+        .match(Props.class, props -> {
+          sender().tell(getContext().actorOf(props), self());
+        })
+        .build();
     }
   }
 
@@ -95,12 +99,13 @@ public class FaultHandlingTest extends AbstractJavaTest {
 
     //#strategy2
 
-    public Supervisor2() {
-      receive(ReceiveBuilder.
-        match(Props.class, props -> {
-          sender().tell(context().actorOf(props), self());
-        }).build()
-      );
+    @Override
+    public Receive initialReceive() {
+      return receiveBuilder()
+        .match(Props.class, props -> {
+          sender().tell(getContext().actorOf(props), self());
+        })
+        .build();
     }
 
     @Override
@@ -116,12 +121,13 @@ public class FaultHandlingTest extends AbstractJavaTest {
   public class Child extends AbstractActor {
     int state = 0;
 
-    public Child() {
-      receive(ReceiveBuilder.
-        match(Exception.class, exception -> { throw exception; }).
-        match(Integer.class, i -> state = i).
-        matchEquals("get", s -> sender().tell(state, self())).build()
-      );
+    @Override
+    public Receive initialReceive() {
+      return receiveBuilder()
+        .match(Exception.class, exception -> { throw exception; })
+        .match(Integer.class, i -> state = i)
+        .matchEquals("get", s -> sender().tell(state, self()))
+        .build();
     }
   }
 

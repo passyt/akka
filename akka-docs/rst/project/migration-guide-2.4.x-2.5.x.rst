@@ -4,8 +4,195 @@
 Migration Guide 2.4.x to 2.5.x
 ##############################
 
-Actor
-=====
+Actor (Java)
+============
+
+AbstractActor
+-------------
+
+``AbstractActor`` has been promoted from its experimental state and while doing this we
+did some small, but important, improvements to the API that will require some mechanical
+changes of your source code.
+
+Previously the receive behavior was set with the ``receive`` method, but now an actor has
+to define its initial receive behavior by implementing the ``initialReceive`` method in 
+the ``AbstractActor``. This has the advantages:
+
+* It gives a clear entry point of what to implement. The compiler tells you that the
+  abstract method must be implemented.
+* It's impossible to forget to set the receive behavior.
+* It's not possible to define the receive behavior more than once.
+
+The return type of ``initialReceive`` is ``AbstractActor.Receive``. It defines which messages
+your Actor can handle, along with the implementation of how the messages should be processed.
+You can build such behavior with a builder named ``ReceiveBuilder``.
+
+``AbstractActor.Receive`` can also be used in ``getContext().become``.
+
+The old ``receive`` method exposed Scala's ``PartialFunction`` and ``BoxedUnit`` in the signature,
+which are unnecessary concepts for newcomers to learn. The new ``initialReceive`` requires no 
+additional imports.
+
+Note that The ``Receive`` can still be implemented in other ways than using the ``ReceiveBuilder``
+since it in the end is just a wrapper around a Scala ``PartialFunction``. For example, one could 
+implement an adapter to `Javaslang Pattern Matching DSL <http://www.javaslang.io/javaslang-docs/#_pattern_matching>`_.
+
+The mechanical source code change for migration to the new ``AbstractActor`` is to implement the
+``initialReceive`` instead of calling ``receive`` (compiler will tell that this is missing).
+
+Old::
+
+  import akka.actor.AbstractActor;
+  import akka.japi.pf.ReceiveBuilder;
+  import scala.PartialFunction;
+  import scala.runtime.BoxedUnit;
+
+  public class SomeActor extends AbstractActor {
+    public SomeActor() {
+      receive(ReceiveBuilder
+        .match(String.class, s -> System.out.println(s.toLowerCase())).
+        .build());
+    }
+  }
+  
+New::
+
+  import akka.actor.AbstractActor;
+  
+  public class SomeActor extends AbstractActor {
+    @Override
+    public Receive initialReceive() {
+      return receiveBuilder()
+        .match(String.class, s -> System.out.println(s.toLowerCase()))
+        .build();
+    }
+  }
+  
+See :ref:`actors-receive-java` documentation for more advice about how to implement
+``initialReceive``.
+
+AbstractPersistentActor
+-----------------------
+
+Similar change as described above for ``AbstractActor`` is needed for ``AbstractPersistentActor``. Implement ``defineReceiveRecover``
+instead of ``receiveRecover``, and ``defineReceiveCommand`` instead of ``receiveCommand``.
+
+Old::
+
+      @Override
+      public PartialFunction<Object, BoxedUnit> receiveCommand() {
+        return ReceiveBuilder.
+          match(String.class, cmd -> {/* ... */}).build();
+      }
+
+      @Override
+      public PartialFunction<Object, BoxedUnit> receiveRecover() {
+        return ReceiveBuilder.
+            match(String.class, evt -> {/* ... */}).build();
+      }
+
+New::
+
+      @Override
+      public Receive defineReceiveCommand() {
+        return receiveBuilder().
+          match(String.class, cmd -> {/* ... */}).build();
+      }
+
+      @Override
+      public Receive defineReceiveRecover() {
+        return receiveBuilder().
+            match(String.class, evt -> {/* ... */}).build();
+      }
+      
+UntypedActor
+------------
+
+``UntypedActor`` has been deprecated in favor of ``AbstractActor``. As a migration path you can extend
+``UntypedAbstractActor`` instead of ``UntypedActor``.
+
+Old::
+
+  import akka.actor.UntypedActor;
+
+  public class SomeActor extends UntypedActor {
+    
+    public static class Msg1 {}
+    
+    @Override
+    public void onReceive(Object msg) throws Exception {
+      if (msg instanceof Msg1) {
+        Msg1 msg1 = (Msg1) msg;
+        // actual work
+      } else {
+        unhandled(msg);
+      }
+    }
+  }
+
+
+New::
+
+  import akka.actor.UntypedAbstractActor;
+
+  public class SomeActor extends UntypedAbstractActor {
+    
+    public static class Msg1 {}
+    
+    @Override
+    public void onReceive(Object msg) throws Exception {
+      if (msg instanceof Msg1) {
+        Msg1 msg1 = (Msg1) msg;
+        // actual work
+      } else {
+        unhandled(msg);
+      }
+    }
+  }
+  
+It's recommended to migrate ``UntypedActor`` to ``AbstractActor`` by implementing
+``initialReceive`` instead of ``onMessage``.
+
+Old::
+
+  import akka.actor.UntypedActor;
+
+  public class SomeActor extends UntypedActor {
+    
+    @Override
+    public void onReceive(Object msg) throws Exception {
+      if (msg instanceof String) {    
+        String s = (String) msg;
+        System.out.println(s.toLowerCase());
+      } else {
+        unhandled(msg);
+      }
+    }
+  }
+
+New::
+
+  import akka.actor.AbstractActor;
+  
+  public class SomeActor extends AbstractActor {
+    @Override
+    public Receive initialReceive() {
+      return receiveBuilder()
+        .match(String.class, s -> {
+          System.out.println(s.toLowerCase());
+        })
+        .build();
+    }
+  }
+
+See :ref:`actors-receive-java` documentation for more advice about how to implement
+``initialReceive``.
+
+Similar with ``UntypedActorWithStash``, ``UntypedPersistentActor``, and
+``UntypedPersistentActorWithAtLeastOnceDelivery``.
+
+Actor (Scala)
+=============
 
 Actor DSL deprecation
 ---------------------
@@ -77,10 +264,8 @@ It is still possible to make a rolling upgrade from a version < 2.4.12 by doing 
    and do a first rolling upgrade
  * second, turn the setting to ``on`` and do another rolling upgrade
 
-For more information see the documentation for the ``akka.remote.netty.ssl.require-mutual-authentication` configuration setting
-in akka-remote's `reference.conf`_.
-
-.. _reference.conf: https://github.com/akka/akka/blob/master/akka-remote/src/main/resources/reference.conf
+For more information see the documentation for the ``akka.remote.netty.ssl.require-mutual-authentication`` configuration setting
+in :ref:`akka-remote's reference.conf <config-akka-remote>`.
 
 Cluster
 =======
@@ -102,7 +287,7 @@ read the documentation for the Coordinated Shutdown and revisit your own impleme
 Most likely your implementation will not be needed any more or it can be simplified.
 
 More information can be found in the :ref:`documentation for Scala <coordinated-shutdown-scala>` or
-:ref:`documentation for Java <coordinated-shutdown-lambda>`  
+:ref:`documentation for Java <coordinated-shutdown-java>`  
 
 Cluster Management Command Line Tool
 ------------------------------------
