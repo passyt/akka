@@ -999,7 +999,17 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     } match {
       case Success(newData) ⇒
         log.debug("Received Update for key [{}], old data [{}], new data [{}]", key, localValue, newData)
-        val envelope = DataEnvelope(pruningCleanupTombstoned(newData))
+
+        // FIXME here we can grab the delta...
+        newData match {
+          case d: DeltaReplicatedData ⇒ d.delta match {
+            case Some(delta) ⇒
+            case None        ⇒
+          }
+          case _ ⇒
+        }
+
+        val envelope = DataEnvelope(pruningCleanupTombstoned(clearDelta(newData)))
         setData(key.id, envelope)
         val durable = isDurable(key.id)
         if (isLocalUpdate(writeConsistency)) {
@@ -1024,6 +1034,11 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
         log.debug("Received Update for key [{}], failed: {}", key, e.getMessage)
         sender() ! ModifyFailure(key, "Update failed: " + e.getMessage, e, req)
     }
+  }
+
+  private def clearDelta(data: ReplicatedData): ReplicatedData = data match {
+    case d: DeltaReplicatedData ⇒ d.clearDelta
+    case _                      ⇒ data
   }
 
   def isDurable(key: String): Boolean =

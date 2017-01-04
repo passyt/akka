@@ -37,6 +37,17 @@ trait ReplicatedData {
 
 }
 
+trait DeltaReplicatedData extends ReplicatedData {
+  type D <: ReplicatedData
+
+  def delta: Option[D]
+
+  def mergeDelta(d: D): T
+
+  def clearDelta: T
+
+}
+
 /**
  * Java API: Interface for implementing a [[ReplicatedData]] in Java.
  *

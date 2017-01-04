@@ -29,6 +29,11 @@ class GCounterSpec extends WordSpec with Matchers {
 
       c6.state(node1) should be(2)
       c6.state(node2) should be(3)
+
+      c2.delta.get.state(node1) should be(1)
+      c3.delta.get.state(node1) should be(2)
+      c6.delta.get.state(node1) should be(2)
+      c6.delta.get.state(node2) should be(3)
     }
 
     "be able to increment each node's record by arbitrary delta" in {
@@ -74,7 +79,7 @@ class GCounterSpec extends WordSpec with Matchers {
       c16.state(node2) should be(10)
       c16.value should be(17)
 
-      // counter 1
+      // counter 2
       val c21 = GCounter()
       val c22 = c21 increment (node1, 2)
       val c23 = c22 increment (node1, 2)
@@ -91,11 +96,15 @@ class GCounterSpec extends WordSpec with Matchers {
       merged1.state(node1) should be(7)
       merged1.state(node2) should be(10)
       merged1.value should be(17)
+      merged1.delta.get.state(node1) should be(7)
+      merged1.delta.get.state(node2) should be(10)
 
       val merged2 = c26 merge c16
       merged2.state(node1) should be(7)
       merged2.state(node2) should be(10)
       merged2.value should be(17)
+      merged2.delta.get.state(node1) should be(7)
+      merged2.delta.get.state(node2) should be(10)
     }
 
     "be able to have its history correctly merged with another GCounter 2" in {
