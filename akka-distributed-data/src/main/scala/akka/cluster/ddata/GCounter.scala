@@ -83,17 +83,15 @@ final class GCounter private[akka] (
     require(n >= 0, "Can't decrement a GCounter")
     if (n == 0) this
     else {
+      val nextValue = state.get(key) match {
+        case Some(v) ⇒ v + n
+        case None    ⇒ n
+      }
       val newDelta = delta match {
-        case Some(d) ⇒ d.state.get(key) match {
-          case Some(v) ⇒ Some(new GCounter(d.state + (key → (v + n))))
-          case None    ⇒ Some(new GCounter(d.state + (key → n)))
-        }
-        case None ⇒ Some(new GCounter(Map(key → n)))
+        case Some(d) ⇒ Some(new GCounter(d.state + (key → nextValue)))
+        case None    ⇒ Some(new GCounter(Map(key → nextValue)))
       }
-      state.get(key) match {
-        case Some(v) ⇒ assignAncestor(new GCounter(state + (key → (v + n)), newDelta))
-        case None    ⇒ assignAncestor(new GCounter(state + (key → n), newDelta))
-      }
+      assignAncestor(new GCounter(state + (key → nextValue), newDelta))
     }
   }
 
