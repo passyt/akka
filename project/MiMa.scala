@@ -82,6 +82,9 @@ object MiMa extends AutoPlugin {
     import com.typesafe.tools.mima.core._
 
     val bcIssuesBetween24and25 = Seq(
+      // #21875 delta-CRDT
+      ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.ddata.GCounter.this"),  
+        
       // #21423 removal of deprecated stages (in 2.5.x)
       ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.javadsl.Source.transform"),
       ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.javadsl.SubSource.transform"),

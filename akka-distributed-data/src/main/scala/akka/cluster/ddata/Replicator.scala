@@ -618,6 +618,9 @@ object Replicator {
     }
     final case class Gossip(updatedData: Map[String, DataEnvelope], sendBack: Boolean) extends ReplicatorMessage
 
+    // FIXME serialization, extends ReplicatorMessage
+    final case class DeltaPropagation(deltas: Map[String, ReplicatedData])
+
   }
 }
 
@@ -853,6 +856,12 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
   // keys that have changed, Changed event published to subscribers on FlushChanges
   var changed = Set.empty[String]
 
+  var gossipTickCount = 0L
+  var deltaCounter = Map.empty[String, Long]
+  var deltaEntries = Map.empty[String, immutable.TreeMap[Long, ReplicatedData]]
+  var deltaSentToNode = Map.empty[String, Map[Address, Long]]
+  var deltaNodeRoundRobinCounter = 0L
+
   // for splitting up gossip in chunks
   var statusCount = 0L
   var statusTotChunks = 0
@@ -936,6 +945,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     case Read(key)                              ⇒ receiveRead(key)
     case Write(key, envelope)                   ⇒ receiveWrite(key, envelope)
     case ReadRepair(key, envelope)              ⇒ receiveReadRepair(key, envelope)
+    case DeltaPropagation(deltas)               ⇒ receiveDeltaPropagation(deltas)
     case FlushChanges                           ⇒ receiveFlushChanges()
     case GossipTick                             ⇒ receiveGossipTick()
     case ClockTick                              ⇒ receiveClockTick()
@@ -993,24 +1003,47 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       localValue match {
         case Some(DataEnvelope(DeletedData, _)) ⇒ throw new DataDeleted(key)
         case Some(envelope @ DataEnvelope(existing, _)) ⇒
-          existing.merge(modify(Some(existing)).asInstanceOf[existing.T])
-        case None ⇒ modify(None)
+          modify(Some(existing)) match {
+            case d: DeltaReplicatedData ⇒
+              (existing.merge(d.clearDelta.asInstanceOf[existing.T]), d.delta)
+            case d ⇒
+              (existing.merge(d.asInstanceOf[existing.T]), None)
+          }
+        case None ⇒ modify(None) match {
+          case d: DeltaReplicatedData ⇒ (d.clearDelta, d.delta)
+          case d                      ⇒ (d, None)
+        }
       }
     } match {
-      case Success(newData) ⇒
-        log.debug("Received Update for key [{}], old data [{}], new data [{}]", key, localValue, newData)
+      case Success((newData, delta)) ⇒
+        log.debug("Received Update for key [{}], old data [{}], new data [{}], delta [{}]", key, localValue, newData, delta)
+        val envelope = DataEnvelope(pruningCleanupTombstoned(newData))
+        setData(key.id, envelope)
 
-        // FIXME here we can grab the delta...
-        newData match {
-          case d: DeltaReplicatedData ⇒ d.delta match {
-            case Some(delta) ⇒
-            case None        ⇒
-          }
-          case _ ⇒
+        // handle the delta
+        delta match {
+          case Some(d) ⇒
+            val c = deltaCounter.get(key.id) match {
+              case Some(c) ⇒ c
+              case None ⇒
+                deltaCounter = deltaCounter.updated(key.id, 1L)
+                1L
+            }
+            val deltaEntriesForKey = deltaEntries.getOrElse(key.id, immutable.TreeMap.empty[Long, ReplicatedData])
+            val updatedEntriesForKey =
+              deltaEntriesForKey.get(c) match {
+                case Some(existingDelta) ⇒
+                  deltaEntriesForKey.updated(c, existingDelta.merge(d.asInstanceOf[existingDelta.T]))
+                case None ⇒
+                  deltaEntriesForKey.updated(c, d)
+              }
+            if (log.isDebugEnabled)
+              log.debug("Update delta for key [{}], version [{}], delta [{}]", key, c, updatedEntriesForKey(c))
+            deltaEntries = deltaEntries.updated(key.id, updatedEntriesForKey)
+
+          case None ⇒ // not DeltaReplicatedData
         }
 
-        val envelope = DataEnvelope(pruningCleanupTombstoned(clearDelta(newData)))
-        setData(key.id, envelope)
         val durable = isDurable(key.id)
         if (isLocalUpdate(writeConsistency)) {
           if (durable)
@@ -1019,6 +1052,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
           else
             sender() ! UpdateSuccess(key, req)
         } else {
+          // FIXME use delta for the direct replication
           val writeAggregator =
             context.actorOf(WriteAggregator.props(key, envelope, writeConsistency, req, nodes, sender(), durable)
               .withDispatcher(context.props.dispatcher))
@@ -1188,7 +1222,98 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     changed = Set.empty[String]
   }
 
-  def receiveGossipTick(): Unit = selectRandomNode(nodes.union(weaklyUpNodes).toVector) foreach gossipTo
+  def receiveDeltaPropagationTick(): Unit = {
+    // TODO optimize, by maintaining a sorted instance variable instead
+    val allNodes = nodes.union(weaklyUpNodes).toVector.sorted
+    if (allNodes.nonEmpty) {
+      val sliceSize = 2 // FIXME config
+      // for each tick we pick a few nodes in round-robin fashion
+      val slice = {
+        val i = (deltaNodeRoundRobinCounter % allNodes.size).toInt
+        val first = allNodes.slice(i, i + sliceSize)
+        if (first.size == sliceSize) first
+        else first ++ allNodes.take(sliceSize - first.size)
+      }
+      deltaNodeRoundRobinCounter += 1
+
+      slice.foreach { node ⇒
+        // collect the deltas that have not already been sent to the node and merge
+        // them into a delta group
+        var deltas = Map.empty[String, ReplicatedData]
+        var versions = Map.empty[String, (Long, Long)] // only for debug so far
+        deltaEntries.foreach {
+          case (key, entries) ⇒
+            val deltaSentToNodeForKey = deltaSentToNode.getOrElse(key, immutable.TreeMap.empty[Address, Long])
+            val j = deltaSentToNodeForKey.getOrElse(node, 0L)
+            val deltaEntriesAfterJ = entries.from(j) match {
+              case entries if entries.isEmpty       ⇒ entries
+              case entries if entries.firstKey == j ⇒ entries.tail // exclude first, i.e. version j that was already sent
+              case entries                          ⇒ entries
+            }
+            if (deltaEntriesAfterJ.nonEmpty) {
+              val deltaGroup = deltaEntriesAfterJ.valuesIterator.reduceLeft {
+                (d1, d2) ⇒ d1.merge(d2.asInstanceOf[d1.T])
+              }
+              deltas = deltas.updated(key, deltaGroup)
+              versions = versions.updated(key, (deltaEntriesAfterJ.firstKey, deltaEntriesAfterJ.lastKey))
+              deltaSentToNode = deltaSentToNode.updated(key, deltaSentToNodeForKey.updated(node, deltaEntriesAfterJ.lastKey))
+              // FIXME split it to several DeltaPropagation if too many entries
+            }
+        }
+
+        if (deltas.nonEmpty) {
+          if (log.isDebugEnabled)
+            log.debug("Sending DeltaPropagation to [{}] with entries: {}, " +
+              "deltaCounter: {}, deltaSentToNode: {}", node, versions, deltaCounter, deltaSentToNode)
+
+          replica(node) ! DeltaPropagation(deltas)
+        }
+      }
+
+      deltaCounter = deltaCounter.map {
+        case (key, value) ⇒
+          if (deltaEntries.contains(key))
+            key → (value + 1)
+          else
+            key → value
+      }
+
+      // FIXME remove from deltaEntries when sent to all nodes,
+      //       perhaps also remove oldest when deltaCounter are too far ahead (e.g. 10 cylces)
+
+      // FIXME clenaup deltaSentToNode when nodes are removed from cluster
+    }
+  }
+
+  def receiveDeltaPropagation(deltas: Map[String, ReplicatedData]): Unit = {
+    if (log.isDebugEnabled)
+      log.debug("Received DeltaPropagation from [{}], containing [{}]", sender().path.address, deltas.keys.mkString(", "))
+    deltas.foreach {
+      case (key, delta) ⇒
+        getData(key) match {
+          case Some(DataEnvelope(existing: DeltaReplicatedData, _)) ⇒
+            val newData = existing.mergeDelta(delta.asInstanceOf[existing.D])
+            write(key, DataEnvelope(newData)) match {
+              case Some(newEnvelope) ⇒
+                if (isDurable(key))
+                  durableStore ! Store(key, newEnvelope.data, None)
+              case None ⇒
+            }
+          case _ ⇒
+          // FIXME should we require that the delta type is always the same type as the full state?
+          //       so that we could use delta as the first value
+        }
+    }
+  }
+
+  def receiveGossipTick(): Unit = {
+    // FIXME use another scheduled tick for the delta propagation
+    if (gossipTickCount % 10 == 0) // FIXME config
+      selectRandomNode(nodes.union(weaklyUpNodes).toVector) foreach gossipTo
+    else
+      receiveDeltaPropagationTick()
+    gossipTickCount += 1
+  }
 
   def gossipTo(address: Address): Unit = {
     val to = replica(address)

@@ -25,14 +25,13 @@ class GCounterSpec extends WordSpec with Matchers {
 
       val c4 = c3 increment node2
       val c5 = c4 increment node2
-      val c6 = c5 increment node2
+      val c6 = c5.clearDelta increment node2
 
       c6.state(node1) should be(2)
       c6.state(node2) should be(3)
 
       c2.delta.get.state(node1) should be(1)
       c3.delta.get.state(node1) should be(2)
-      c6.delta.get.state(node1) should be(2)
       c6.delta.get.state(node2) should be(3)
     }
 
