@@ -38,13 +38,17 @@ trait ReplicatedData {
 }
 
 trait DeltaReplicatedData extends ReplicatedData {
-  type D <: ReplicatedData
 
-  def delta: Option[D]
+  /**
+   * The accumulated delta of mutator operations since previous
+   * `resetDelta`.
+   */
+  def delta: T
 
-  def mergeDelta(d: D): T
-
-  def clearDelta: T
+  /**
+   * Reset collection of deltas from mutator operations.
+   */
+  def resetDelta: T
 
 }
 

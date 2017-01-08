@@ -39,8 +39,8 @@ object GCounter {
  */
 @SerialVersionUID(1L)
 final class GCounter private[akka] (
-  private[akka] val state: Map[UniqueAddress, BigInt] = Map.empty,
-  override val delta:      Option[GCounter]           = None)
+  private[akka] val state:  Map[UniqueAddress, BigInt] = Map.empty,
+  private[akka] val _delta: Option[GCounter]           = None)
   extends DeltaReplicatedData with ReplicatedDataSerialization with RemovedNodePruning with FastMerge {
 
   import GCounter.Zero
@@ -87,7 +87,7 @@ final class GCounter private[akka] (
         case Some(v) ⇒ v + n
         case None    ⇒ n
       }
-      val newDelta = delta match {
+      val newDelta = _delta match {
         case Some(d) ⇒ Some(new GCounter(d.state + (key → nextValue)))
         case None    ⇒ Some(new GCounter(Map(key → nextValue)))
       }
@@ -106,19 +106,15 @@ final class GCounter private[akka] (
           merged = merged.updated(key, thisValue)
       }
       clearAncestor()
-      val newDelta = delta match {
-        case Some(d1) ⇒ that.delta match {
-          case Some(d2) ⇒ Some(d1.merge(d2))
-          case None     ⇒ delta
-        }
-        case None ⇒ that.delta
-      }
-      new GCounter(merged, newDelta)
+      new GCounter(merged)
     }
 
-  override def mergeDelta(d: GCounter): GCounter = merge(d)
+  override def delta: GCounter = _delta match {
+    case Some(d) ⇒ d
+    case None    ⇒ GCounter.empty
+  }
 
-  override def clearDelta: GCounter = new GCounter(state)
+  override def resetDelta: GCounter = new GCounter(state)
 
   // FIXME handle pruning for deltas
 

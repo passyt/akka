@@ -1005,12 +1005,12 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
         case Some(envelope @ DataEnvelope(existing, _)) ⇒
           modify(Some(existing)) match {
             case d: DeltaReplicatedData ⇒
-              (existing.merge(d.clearDelta.asInstanceOf[existing.T]), d.delta)
+              (existing.merge(d.resetDelta.asInstanceOf[existing.T]), Some(d.delta))
             case d ⇒
               (existing.merge(d.asInstanceOf[existing.T]), None)
           }
         case None ⇒ modify(None) match {
-          case d: DeltaReplicatedData ⇒ (d.clearDelta, d.delta)
+          case d: DeltaReplicatedData ⇒ (d.resetDelta, Some(d.delta))
           case d                      ⇒ (d, None)
         }
       }
@@ -1068,11 +1068,6 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
         log.debug("Received Update for key [{}], failed: {}", key, e.getMessage)
         sender() ! ModifyFailure(key, "Update failed: " + e.getMessage, e, req)
     }
-  }
-
-  private def clearDelta(data: ReplicatedData): ReplicatedData = data match {
-    case d: DeltaReplicatedData ⇒ d.clearDelta
-    case _                      ⇒ data
   }
 
   def isDurable(key: String): Boolean =
@@ -1229,12 +1224,16 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       val sliceSize = 2 // FIXME config
       // for each tick we pick a few nodes in round-robin fashion
       val slice = {
-        val i = (deltaNodeRoundRobinCounter % allNodes.size).toInt
-        val first = allNodes.slice(i, i + sliceSize)
-        if (first.size == sliceSize) first
-        else first ++ allNodes.take(sliceSize - first.size)
+        if (allNodes.size <= sliceSize)
+          allNodes
+        else {
+          val i = (deltaNodeRoundRobinCounter % allNodes.size).toInt
+          val first = allNodes.slice(i, i + sliceSize)
+          if (first.size == sliceSize) first
+          else first ++ allNodes.take(sliceSize - first.size)
+        }
       }
-      deltaNodeRoundRobinCounter += 1
+      deltaNodeRoundRobinCounter += sliceSize
 
       slice.foreach { node ⇒
         // collect the deltas that have not already been sent to the node and merge
@@ -1292,16 +1291,24 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       case (key, delta) ⇒
         getData(key) match {
           case Some(DataEnvelope(existing: DeltaReplicatedData, _)) ⇒
-            val newData = existing.mergeDelta(delta.asInstanceOf[existing.D])
+            val newData = existing.merge(delta.asInstanceOf[existing.T])
             write(key, DataEnvelope(newData)) match {
               case Some(newEnvelope) ⇒
                 if (isDurable(key))
                   durableStore ! Store(key, newEnvelope.data, None)
               case None ⇒
             }
-          case _ ⇒
-          // FIXME should we require that the delta type is always the same type as the full state?
-          //       so that we could use delta as the first value
+          case Some(DataEnvelope(existing, _)) ⇒
+            log.warning(
+              "Wrong type for delta propagation of [{}], existing type [{}], got [{}]",
+              key, existing.getClass.getName, delta.getClass.getName)
+          case None ⇒
+            write(key, DataEnvelope(delta)) match {
+              case Some(newEnvelope) ⇒
+                if (isDurable(key))
+                  durableStore ! Store(key, newEnvelope.data, None)
+              case None ⇒
+            }
         }
     }
   }

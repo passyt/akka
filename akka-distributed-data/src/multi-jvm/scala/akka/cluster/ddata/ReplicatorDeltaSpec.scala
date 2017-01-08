@@ -76,10 +76,7 @@ class ReplicatorDeltaSpec extends MultiNodeSpec(ReplicatorDeltaSpec) with STMult
       enterBarrier("ready")
 
       runOn(first) {
-        // FIXME see FIXME in Replicator.receiveDeltaPropagation
-        //replicator ! Update(KeyA, GCounter.empty, WriteLocal)(_ + 1)
-        replicator ! Update(KeyA, GCounter.empty, WriteAll(5.seconds))(_ + 1)
-
+        replicator ! Update(KeyA, GCounter.empty, WriteLocal)(_ + 1)
       }
       enterBarrier("updated-1")
 
@@ -90,8 +87,6 @@ class ReplicatorDeltaSpec extends MultiNodeSpec(ReplicatorDeltaSpec) with STMult
         }
       }
       enterBarrier("verified-1")
-
-      Thread.sleep(5000) // FIXME checking logs
 
       runOn(first) {
         replicator ! Update(KeyA, GCounter.empty, WriteLocal)(_ + 1)
