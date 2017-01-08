@@ -75,7 +75,8 @@ object ReplicatorSettings {
       pruningInterval = config.getDuration("pruning-interval", MILLISECONDS).millis,
       maxPruningDissemination = config.getDuration("max-pruning-dissemination", MILLISECONDS).millis,
       durableStoreProps = Left((config.getString("durable.store-actor-class"), config.getConfig("durable"))),
-      durableKeys = config.getStringList("durable.keys").asScala.toSet)
+      durableKeys = config.getStringList("durable.keys").asScala.toSet,
+      deltaPropagationInterval = config.getDuration("delta-propagation-interval", MILLISECONDS).millis)
   }
 
   /**
@@ -110,6 +111,7 @@ object ReplicatorSettings {
  * @param durableKeys Keys that are durable. Prefix matching is supported by using
  *        `*` at the end of a key. All entries can be made durable by including "*"
  *        in the `Set`.
+ * @param deltaPropagationInterval How often the Replicator should send out delta information.
  */
 final class ReplicatorSettings(
   val role:                      Option[String],
@@ -120,13 +122,14 @@ final class ReplicatorSettings(
   val pruningInterval:           FiniteDuration,
   val maxPruningDissemination:   FiniteDuration,
   val durableStoreProps:         Either[(String, Config), Props],
-  val durableKeys:               Set[String]) {
+  val durableKeys:               Set[String],
+  val deltaPropagationInterval:  FiniteDuration) {
 
   // For backwards compatibility
   def this(role: Option[String], gossipInterval: FiniteDuration, notifySubscribersInterval: FiniteDuration,
            maxDeltaElements: Int, dispatcher: String, pruningInterval: FiniteDuration, maxPruningDissemination: FiniteDuration) =
     this(role, gossipInterval, notifySubscribersInterval, maxDeltaElements, dispatcher, pruningInterval,
-      maxPruningDissemination, Right(Props.empty), Set.empty)
+      maxPruningDissemination, Right(Props.empty), Set.empty, Duration.Zero)
 
   def withRole(role: String): ReplicatorSettings = copy(role = ReplicatorSettings.roleOption(role))
 
@@ -134,6 +137,9 @@ final class ReplicatorSettings(
 
   def withGossipInterval(gossipInterval: FiniteDuration): ReplicatorSettings =
     copy(gossipInterval = gossipInterval)
+
+  def withdeltaPropagationInterval(deltaPropagationInterval: FiniteDuration): ReplicatorSettings =
+    copy(deltaPropagationInterval = deltaPropagationInterval)
 
   def withNotifySubscribersInterval(notifySubscribersInterval: FiniteDuration): ReplicatorSettings =
     copy(notifySubscribersInterval = notifySubscribersInterval)
@@ -178,9 +184,10 @@ final class ReplicatorSettings(
     pruningInterval:           FiniteDuration                  = pruningInterval,
     maxPruningDissemination:   FiniteDuration                  = maxPruningDissemination,
     durableStoreProps:         Either[(String, Config), Props] = durableStoreProps,
-    durableKeys:               Set[String]                     = durableKeys): ReplicatorSettings =
+    durableKeys:               Set[String]                     = durableKeys,
+    deltaPropagationInterval:  FiniteDuration                  = deltaPropagationInterval): ReplicatorSettings =
     new ReplicatorSettings(role, gossipInterval, notifySubscribersInterval, maxDeltaElements, dispatcher,
-      pruningInterval, maxPruningDissemination, durableStoreProps, durableKeys)
+      pruningInterval, maxPruningDissemination, durableStoreProps, durableKeys, deltaPropagationInterval)
 }
 
 object Replicator {
@@ -517,6 +524,7 @@ object Replicator {
   private[akka] object Internal {
 
     case object GossipTick
+    case object DeltaPropagationTick
     case object RemovedNodePruningTick
     case object ClockTick
     final case class Write(key: String, envelope: DataEnvelope) extends ReplicatorMessage
@@ -810,6 +818,8 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
   //Start periodic gossip to random nodes in cluster
   import context.dispatcher
   val gossipTask = context.system.scheduler.schedule(gossipInterval, gossipInterval, self, GossipTick)
+  val deltaPropagationTask = context.system.scheduler.schedule(deltaPropagationInterval, deltaPropagationInterval,
+    self, DeltaPropagationTick)
   val notifyTask = context.system.scheduler.schedule(notifySubscribersInterval, notifySubscribersInterval, self, FlushChanges)
   val pruningTask = context.system.scheduler.schedule(pruningInterval, pruningInterval, self, RemovedNodePruningTick)
   val clockTask = context.system.scheduler.schedule(gossipInterval, gossipInterval, self, ClockTick)
@@ -856,7 +866,6 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
   // keys that have changed, Changed event published to subscribers on FlushChanges
   var changed = Set.empty[String]
 
-  var gossipTickCount = 0L
   var deltaCounter = Map.empty[String, Long]
   var deltaEntries = Map.empty[String, immutable.TreeMap[Long, ReplicatedData]]
   var deltaSentToNode = Map.empty[String, Map[Address, Long]]
@@ -881,6 +890,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
   override def postStop(): Unit = {
     cluster.unsubscribe(self)
     gossipTask.cancel()
+    deltaPropagationTask.cancel()
     notifyTask.cancel()
     pruningTask.cancel()
     clockTask.cancel()
@@ -947,6 +957,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     case ReadRepair(key, envelope)              ⇒ receiveReadRepair(key, envelope)
     case DeltaPropagation(deltas)               ⇒ receiveDeltaPropagation(deltas)
     case FlushChanges                           ⇒ receiveFlushChanges()
+    case DeltaPropagationTick                   ⇒ receiveDeltaPropagationTick()
     case GossipTick                             ⇒ receiveGossipTick()
     case ClockTick                              ⇒ receiveClockTick()
     case Status(otherDigests, chunk, totChunks) ⇒ receiveStatus(otherDigests, chunk, totChunks)
@@ -1314,12 +1325,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
   }
 
   def receiveGossipTick(): Unit = {
-    // FIXME use another scheduled tick for the delta propagation
-    if (gossipTickCount % 10 == 0) // FIXME config
-      selectRandomNode(nodes.union(weaklyUpNodes).toVector) foreach gossipTo
-    else
-      receiveDeltaPropagationTick()
-    gossipTickCount += 1
+    selectRandomNode(nodes.union(weaklyUpNodes).toVector) foreach gossipTo
   }
 
   def gossipTo(address: Address): Unit = {
