@@ -1063,9 +1063,12 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
           else
             sender() ! UpdateSuccess(key, req)
         } else {
-          // FIXME use delta for the direct replication
+          val writeEnvelope = delta match {
+            case Some(d) ⇒ DataEnvelope(d)
+            case None    ⇒ envelope
+          }
           val writeAggregator =
-            context.actorOf(WriteAggregator.props(key, envelope, writeConsistency, req, nodes, sender(), durable)
+            context.actorOf(WriteAggregator.props(key, writeEnvelope, writeConsistency, req, nodes, sender(), durable)
               .withDispatcher(context.props.dispatcher))
           if (durable) {
             durableStore ! Store(key.id, envelope.data,
