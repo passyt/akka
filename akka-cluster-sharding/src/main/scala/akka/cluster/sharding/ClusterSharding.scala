@@ -25,6 +25,8 @@ import akka.pattern.BackoffSupervisor
 import akka.util.ByteString
 import akka.pattern.ask
 import akka.dispatch.Dispatchers
+import akka.cluster.ddata.ReplicatorSettings
+import akka.cluster.ddata.Replicator
 
 /**
  * This extension provides sharding functionality of actors in a cluster.
@@ -413,7 +415,6 @@ private[akka] class ClusterShardingGuardian extends Actor {
 
   val cluster = Cluster(context.system)
   val sharding = ClusterSharding(context.system)
-  lazy val replicator = DistributedData(context.system).replicator
 
   private def coordinatorSingletonManagerName(encName: String): String =
     encName + "Coordinator"
@@ -421,21 +422,36 @@ private[akka] class ClusterShardingGuardian extends Actor {
   private def coordinatorPath(encName: String): String =
     (self.path / coordinatorSingletonManagerName(encName) / "singleton" / "coordinator").toStringWithoutAddress
 
+  private def startReplicator(settings: ClusterShardingSettings, encTypeName: String): ActorRef = {
+    if (settings.stateStoreMode == ClusterShardingSettings.StateStoreModeDData) {
+      val replicatorSettings = (settings.ddataSettings match {
+        case Some(s) ⇒ s
+        case None ⇒ ReplicatorSettings(context.system.settings.config.getConfig(
+          "akka.cluster.sharding.distributed-data"))
+      }).withRole(settings.role)
+      val name = encTypeName + "Replicator"
+      context.actorOf(Replicator.props(replicatorSettings), name)
+    } else
+      context.system.deadLetters
+  }
+
   def receive = {
     case Start(typeName, entityProps, settings, extractEntityId, extractShardId, allocationStrategy, handOffStopMessage) ⇒
       import settings.role
       import settings.tuningParameters.coordinatorFailureBackoff
 
       val encName = URLEncoder.encode(typeName, ByteString.UTF_8)
+      val replicator = startReplicator(settings, encName)
       val cName = coordinatorSingletonManagerName(encName)
       val cPath = coordinatorPath(encName)
       val shardRegion = context.child(encName).getOrElse {
         if (context.child(cName).isEmpty) {
           val coordinatorProps =
-            if (settings.stateStoreMode == "persistence")
+            if (settings.stateStoreMode == ClusterShardingSettings.StateStoreModePersistence)
               ShardCoordinator.props(typeName, settings, allocationStrategy)
-            else
+            else {
               ShardCoordinator.props(typeName, settings, allocationStrategy, replicator)
+            }
           val singletonProps = BackoffSupervisor.props(
             childProps = coordinatorProps,
             childName = "coordinator",
@@ -460,7 +476,8 @@ private[akka] class ClusterShardingGuardian extends Actor {
             coordinatorPath = cPath,
             extractEntityId = extractEntityId,
             extractShardId = extractShardId,
-            handOffStopMessage = handOffStopMessage).withDispatcher(context.props.dispatcher),
+            handOffStopMessage = handOffStopMessage,
+            replicator = replicator).withDispatcher(context.props.dispatcher),
           name = encName)
       }
       sender() ! Started(shardRegion)
@@ -476,7 +493,8 @@ private[akka] class ClusterShardingGuardian extends Actor {
             settings = settings,
             coordinatorPath = cPath,
             extractEntityId = extractEntityId,
-            extractShardId = extractShardId).withDispatcher(context.props.dispatcher),
+            extractShardId = extractShardId,
+            replicator = context.system.deadLetters).withDispatcher(context.props.dispatcher),
           name = encName)
       }
       sender() ! Started(shardRegion)

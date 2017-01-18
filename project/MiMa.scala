@@ -83,6 +83,12 @@ object MiMa extends AutoPlugin {
 
     val bcIssuesBetween24and25 = Seq(
       
+      // #22154 Sharding remembering entities with ddata, internal actors
+      FilterAnyProblemStartingWith("akka.cluster.sharding.Shard"),
+      FilterAnyProblemStartingWith("akka.cluster.sharding.PersistentShard"),
+      FilterAnyProblemStartingWith("akka.cluster.sharding.ClusterShardingGuardian"),
+      FilterAnyProblemStartingWith("akka.cluster.sharding.ShardRegion"),
+        
       // #21537 coordinated shutdown
       ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.ClusterCoreDaemon.removed"),
       ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.Gossip.convergence"),  

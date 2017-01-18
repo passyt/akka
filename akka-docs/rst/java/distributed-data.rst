@@ -451,7 +451,9 @@ works with any type that has a registered Akka serializer. This is how such an s
 look like for the ``TwoPhaseSet``:
 
 .. includecode:: code/docs/ddata/japi/protobuf/TwoPhaseSetSerializer2.java#serializer
-  
+
+.. _ddata_durable_java:
+
 Durable Storage
 ---------------
 
