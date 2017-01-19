@@ -470,39 +470,64 @@ private[akka] class DDataShard(
   private val maxUpdateAttempts = 3
 
   implicit private val node = Cluster(context.system)
-  // FIXME use hashing and more keys to be able to support many entities
-  private val StateKey = ORSetKey[EntityId](s"shard-${typeName}-${shardId}")
+
+  // The default maximum-frame-size is 256 KiB with Artery.
+  // ORSet with 40000 elements has a size of ~ 200000 bytes.
+  // By splitting the elements over 5 keys we can safely support 200000 entities per shard.
+  // This is by intention not configurable because it's important to have the same
+  // configuration on each node.
+  private val numberOfKeys = 5
+  private val stateKeys: Array[ORSetKey[EntityId]] =
+    Array.tabulate(numberOfKeys)(i ⇒ ORSetKey[EntityId](s"shard-${typeName}-${shardId}-$i"))
+
+  private def key(entityId: EntityId): ORSetKey[EntityId] = {
+    val i = (math.abs(entityId.hashCode) % numberOfKeys)
+    stateKeys(i)
+  }
 
   // get initial state from ddata replicator
   getState()
 
-  private def getState(): Unit =
-    replicator ! Get(StateKey, ReadMajority(waitingForStateTimeout))
+  private def getState(): Unit = {
+    (0 until numberOfKeys).map { i ⇒
+      replicator ! Get(stateKeys(i), ReadMajority(waitingForStateTimeout), Some(i))
+    }
+  }
 
   // would be initialized after recovery completed
   override def initialized(): Unit = {}
 
-  override def receive = waitingForState
+  override def receive = waitingForState(Set.empty)
 
   // This state will stash all commands
-  private def waitingForState: Receive = {
-    case g @ GetSuccess(StateKey, _) ⇒
-      state = State(g.get(StateKey).elements)
-      recoveryCompleted()
+  private def waitingForState(gotKeys: Set[Int]): Receive = {
+    def receiveOne(i: Int): Unit = {
+      val newGotKeys = gotKeys + i
+      if (newGotKeys.size == numberOfKeys)
+        recoveryCompleted()
+      else
+        context.become(waitingForState(newGotKeys))
+    }
 
-    case GetFailure(StateKey, _) ⇒
-      log.error(
-        "The DDataShard was unable to get an initial state within 'waiting-for-state-timeout': {} millis",
-        waitingForStateTimeout.toMillis)
-      // parent ShardRegion supervisor will notice that it terminated and will start it again, after backoff
-      context.stop(self)
+    {
+      case g @ GetSuccess(_, Some(i: Int)) ⇒
+        val key = stateKeys(i)
+        state = state.copy(entities = state.entities union (g.get(key).elements))
+        receiveOne(i)
 
-    case NotFound(StateKey, _) ⇒
-      // empty state, activate immediately
-      recoveryCompleted()
+      case GetFailure(_, _) ⇒
+        log.error(
+          "The DDataShard was unable to get an initial state within 'waiting-for-state-timeout': {} millis",
+          waitingForStateTimeout.toMillis)
+        // parent ShardRegion supervisor will notice that it terminated and will start it again, after backoff
+        context.stop(self)
 
-    case _ ⇒
-      stash()
+      case NotFound(_, Some(i: Int)) ⇒
+        receiveOne(i)
+
+      case _ ⇒
+        stash()
+    }
   }
 
   private def recoveryCompleted(): Unit = {
@@ -519,7 +544,7 @@ private[akka] class DDataShard(
   }
 
   private def sendUpdate(evt: StateChange, retryCount: Int) = {
-    replicator ! Update(StateKey, ORSet.empty[EntityId], WriteMajority(updatingStateTimeout),
+    replicator ! Update(key(evt.entityId), ORSet.empty[EntityId], WriteMajority(updatingStateTimeout),
       Some((evt, retryCount))) { existing ⇒
         evt match {
           case EntityStarted(id) ⇒ existing + id
@@ -530,13 +555,13 @@ private[akka] class DDataShard(
 
   // this state will stash all messages until it receives UpdateSuccess
   private def waitingForUpdate[E <: StateChange](evt: E, afterUpdateCallback: E ⇒ Unit): Receive = {
-    case UpdateSuccess(StateKey, Some((`evt`, _))) ⇒
+    case UpdateSuccess(_, Some((`evt`, _))) ⇒
       log.debug("The DDataShard state was successfully updated with {}", evt)
       context.unbecome()
       afterUpdateCallback(evt)
       unstashAll()
 
-    case UpdateTimeout(StateKey, Some((`evt`, retryCount: Int))) ⇒
+    case UpdateTimeout(_, Some((`evt`, retryCount: Int))) ⇒
       log.error(
         "The DDataShard was unable to update state, attempt {}, within 'updating-state-timeout'={} millis, event={}",
         retryCount, updatingStateTimeout.toMillis, evt)
@@ -546,7 +571,7 @@ private[akka] class DDataShard(
       } else
         sendUpdate(evt, retryCount + 1)
 
-    case ModifyFailure(StateKey, error, cause, Some((`evt`, _))) ⇒
+    case ModifyFailure(_, error, cause, Some((`evt`, _))) ⇒
       log.error(
         cause,
         "The DDataShard was unable to update state with error {} and event {}. Shard will be restarted",
