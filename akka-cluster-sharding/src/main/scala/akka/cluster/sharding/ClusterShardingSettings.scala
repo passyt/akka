@@ -9,7 +9,6 @@ import akka.actor.ActorSystem
 import akka.actor.NoSerializationVerificationNeeded
 import com.typesafe.config.Config
 import akka.cluster.singleton.ClusterSingletonManagerSettings
-import akka.cluster.ddata.ReplicatorSettings
 
 object ClusterShardingSettings {
 
@@ -50,22 +49,14 @@ object ClusterShardingSettings {
 
     val coordinatorSingletonSettings = ClusterSingletonManagerSettings(config.getConfig("coordinator-singleton"))
 
-    val stateStoreMode = config.getString("state-store-mode")
-    val ddataSettings =
-      if (stateStoreMode == ClusterShardingSettings.StateStoreModeDData)
-        Some(ReplicatorSettings(config.getConfig("distributed-data")))
-      else
-        None
-
     new ClusterShardingSettings(
       role = roleOption(config.getString("role")),
       rememberEntities = config.getBoolean("remember-entities"),
       journalPluginId = config.getString("journal-plugin-id"),
       snapshotPluginId = config.getString("snapshot-plugin-id"),
-      stateStoreMode,
+      stateStoreMode = config.getString("state-store-mode"),
       tuningParameters,
-      coordinatorSingletonSettings,
-      ddataSettings)
+      coordinatorSingletonSettings)
   }
 
   /**
@@ -166,22 +157,7 @@ final class ClusterShardingSettings(
   val snapshotPluginId:             String,
   val stateStoreMode:               String,
   val tuningParameters:             ClusterShardingSettings.TuningParameters,
-  val coordinatorSingletonSettings: ClusterSingletonManagerSettings,
-  val ddataSettings:                Option[ReplicatorSettings]) extends NoSerializationVerificationNeeded {
-
-  /**
-   * For backwards compatibility
-   */
-  def this(
-    role:                         Option[String],
-    rememberEntities:             Boolean,
-    journalPluginId:              String,
-    snapshotPluginId:             String,
-    stateStoreMode:               String,
-    tuningParameters:             ClusterShardingSettings.TuningParameters,
-    coordinatorSingletonSettings: ClusterSingletonManagerSettings) =
-    this(role, rememberEntities, journalPluginId, snapshotPluginId, stateStoreMode, tuningParameters,
-      coordinatorSingletonSettings, ddataSettings = None)
+  val coordinatorSingletonSettings: ClusterSingletonManagerSettings) extends NoSerializationVerificationNeeded {
 
   import ClusterShardingSettings.{ StateStoreModePersistence, StateStoreModeDData }
   require(
@@ -214,9 +190,6 @@ final class ClusterShardingSettings(
   def withCoordinatorSingletonSettings(coordinatorSingletonSettings: ClusterSingletonManagerSettings): ClusterShardingSettings =
     copy(coordinatorSingletonSettings = coordinatorSingletonSettings)
 
-  def withDdataSettings(ddataSettings: ReplicatorSettings): ClusterShardingSettings =
-    copy(ddataSettings = Some(ddataSettings))
-
   private def copy(
     role:                         Option[String]                           = role,
     rememberEntities:             Boolean                                  = rememberEntities,
@@ -224,8 +197,7 @@ final class ClusterShardingSettings(
     snapshotPluginId:             String                                   = snapshotPluginId,
     stateStoreMode:               String                                   = stateStoreMode,
     tuningParameters:             ClusterShardingSettings.TuningParameters = tuningParameters,
-    coordinatorSingletonSettings: ClusterSingletonManagerSettings          = coordinatorSingletonSettings,
-    ddataSettings:                Option[ReplicatorSettings]               = ddataSettings): ClusterShardingSettings =
+    coordinatorSingletonSettings: ClusterSingletonManagerSettings          = coordinatorSingletonSettings): ClusterShardingSettings =
     new ClusterShardingSettings(
       role,
       rememberEntities,
@@ -233,6 +205,5 @@ final class ClusterShardingSettings(
       snapshotPluginId,
       stateStoreMode,
       tuningParameters,
-      coordinatorSingletonSettings,
-      ddataSettings)
+      coordinatorSingletonSettings)
 }

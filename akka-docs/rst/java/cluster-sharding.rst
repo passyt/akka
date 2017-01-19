@@ -199,8 +199,14 @@ This mode can be enabled by setting configuration property::
 
     akka.cluster.sharding.state-store-mode = ddata 
 
-It is using its own Distributed Data ``Replicator`` that is configured in the the section
-``akka.cluster.sharding.distributed-data``.
+It is using its own Distributed Data ``Replicator`` per node role. In this way you can use a subset of
+all nodes for some entity types and another subset for other entity types. Each such replicator has a name
+that contains the node role and therefore the role configuration must be the same on all nodes in the
+cluster, i.e. you can't change the roles when performing a rolling upgrade. 
+ 
+The settings for Distributed Data is configured in the the section 
+``akka.cluster.sharding.distributed-data``. It's not possible to have different 
+``distributed-data`` settings for different sharding entity types.
 
 You must explicitly add the ``akka-distributed-data-experimental`` dependency to your build if
 you use this mode. It is possible to remove ``akka-persistence`` dependency from a project if it
@@ -257,7 +263,11 @@ entity will be automatically restarted after the entity restart backoff specifie
 the configuration.
 
 When :ref:`cluster_sharding_ddata_java` is used the identifiers of the entities are
-stored in :ref:`ddata_durable_java` of Distributed Data.
+stored in :ref:`ddata_durable_java` of Distributed Data. You may want to change the 
+configuration of the akka.cluster.sharding.distributed-data.durable.lmdb.dir`, since
+the default directory contains the remote port of the actor system. If using a dynamically
+assigned port (0) it will be different each time and the previously stored data will not
+be loaded. 
 
 When ``rememberEntities`` is set to false, a ``Shard`` will not automatically restart any entities
 after a rebalance or recovering from a crash. Entities will only be started once the first message
