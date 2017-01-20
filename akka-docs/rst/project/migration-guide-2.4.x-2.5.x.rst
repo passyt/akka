@@ -71,6 +71,22 @@ New::
 See :ref:`actors-receive-java` documentation for more advice about how to implement
 ``initialReceive``.
 
+A few new methods have been added with deprecation of the old. Worth noting is ``preRestart``.
+
+Old::
+
+  @Override
+  public void preRestart(Throwable reason, scala.Option<Object> message) {
+    super.preRestart(reason, message);
+  }
+  
+New::
+
+  @Override
+  public void preRestart(Throwable reason, java.util.Optional<Object> message) {
+    super.preRestart(reason, message);
+  }
+
 AbstractPersistentActor
 -----------------------
 

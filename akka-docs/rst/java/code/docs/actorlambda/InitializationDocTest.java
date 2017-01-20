@@ -13,10 +13,9 @@ import docs.AbstractJavaTest;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import scala.Option;
 import scala.concurrent.Await;
 import scala.concurrent.duration.Duration;
-
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class InitializationDocTest extends AbstractJavaTest {
@@ -56,7 +55,7 @@ public class InitializationDocTest extends AbstractJavaTest {
     // of the actor. To opt-out from stopping the children, we
     // have to override preRestart()
     @Override
-    public void preRestart(Throwable reason, Option<Object> message)
+    public void preRestart(Throwable reason, Optional<Object> message)
       throws Exception {
       // Keep the call to postStop(), but no stopping of children
       postStop();

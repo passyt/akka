@@ -167,6 +167,7 @@ object MiMa extends AutoPlugin {
       ProblemFilters.exclude[MissingClassProblem]("akka.actor.AbstractActorContext"),
       ProblemFilters.exclude[IncompatibleResultTypeProblem]("akka.actor.AbstractActor.getContext"),
       ProblemFilters.exclude[IncompatibleResultTypeProblem]("akka.actor.AbstractActor.emptyBehavior"),
+      ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.actor.dungeon.Children.findChild"),
       ProblemFilters.exclude[MissingTypesProblem]("akka.actor.ActorCell"),
       ProblemFilters.exclude[MissingTypesProblem]("akka.routing.RoutedActorCell"),
       ProblemFilters.exclude[MissingTypesProblem]("akka.routing.ResizablePoolCell"),

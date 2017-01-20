@@ -22,7 +22,7 @@ import akka.event.Logging.Debug;
 import docs.AbstractJavaTest;
 import org.junit.Test;
 import akka.testkit.JavaTestKit;
-import scala.Option;
+import java.util.Optional;
 
 //#imports-mdc
 import akka.event.Logging;
@@ -160,9 +160,9 @@ public class LoggingDocTest extends AbstractJavaTest {
     }
 
     @Override
-    public void preRestart(Throwable reason, Option<Object> message) {
+    public void preRestart(Throwable reason, Optional<Object> message) {
       log.error(reason, "Restarting due to [{}] when processing [{}]",
-        reason.getMessage(), message.isDefined() ? message.get() : "");
+        reason.getMessage(), message.isPresent() ? message.get() : "");
     }
 
     @Override

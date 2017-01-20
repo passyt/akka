@@ -8,6 +8,7 @@ import akka.annotation.ApiMayChange
 import akka.japi.pf.ReceiveBuilder
 import akka.japi.pf.UnitPFBuilder
 import scala.runtime.BoxedUnit
+import java.util.Optional
 
 /**
  * Java API: compatible with lambda expressions
@@ -50,7 +51,13 @@ object AbstractActor {
      * Returns a reference to the named child or null if no child with
      * that name exists.
      */
+    @deprecated("Use findChild instead", "2.5.0")
     def getChild(name: String): ActorRef
+
+    /**
+     * Returns a reference to the named child if it exists.
+     */
+    def findChild(name: String): Optional[ActorRef]
 
     /**
      * Changes the Actor's behavior to become the new 'Receive' handler.
@@ -156,6 +163,14 @@ abstract class AbstractActor extends Actor {
   @throws(classOf[Exception])
   override def postStop(): Unit = super.postStop()
 
+  // TODO In 2.6.0 we can remove deprecation and make the method final
+  @deprecated("Override preRestart with message parameter with Optional type instead", "2.5.0")
+  @throws(classOf[Exception])
+  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    import scala.compat.java8.OptionConverters._
+    preRestart(reason, message.asJava)
+  }
+
   /**
    * User overridable callback: '''By default it disposes of all children and then calls `postStop()`.'''
    * <p/>
@@ -163,7 +178,10 @@ abstract class AbstractActor extends Actor {
    * up of resources before Actor is terminated.
    */
   @throws(classOf[Exception])
-  override def preRestart(reason: Throwable, message: Option[Any]): Unit = super.preRestart(reason, message)
+  def preRestart(reason: Throwable, message: Optional[Any]): Unit = {
+    import scala.compat.java8.OptionConverters._
+    super.preRestart(reason, message.asScala)
+  }
 
   /**
    * User overridable callback: By default it calls `preStart()`.

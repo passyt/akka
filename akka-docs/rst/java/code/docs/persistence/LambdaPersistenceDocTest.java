@@ -10,11 +10,11 @@ import akka.pattern.BackoffSupervisor;
 import akka.persistence.*;
 import akka.persistence.journal.EventAdapter;
 import akka.persistence.journal.EventSeq;
-import scala.Option;
 import scala.concurrent.duration.Duration;
 import scala.PartialFunction;
 import scala.runtime.BoxedUnit;
 import java.io.Serializable;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class LambdaPersistenceDocTest {
@@ -42,7 +42,7 @@ public class LambdaPersistenceDocTest {
 
       //#recover-on-restart-disabled
       @Override
-      public void preRestart(Throwable reason, Option<Object> message) {}
+      public void preRestart(Throwable reason, Optional<Object> message) {}
       //#recover-on-restart-disabled
     }
 

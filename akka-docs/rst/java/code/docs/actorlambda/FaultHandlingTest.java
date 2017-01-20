@@ -9,8 +9,9 @@ import akka.actor.*;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import docs.AbstractJavaTest;
+import java.util.Optional;
+
 import static akka.pattern.Patterns.ask;
-import scala.Option;
 
 //#testkit
 import akka.testkit.JavaTestKit;
@@ -109,7 +110,7 @@ public class FaultHandlingTest extends AbstractJavaTest {
     }
 
     @Override
-    public void preRestart(Throwable cause, Option<Object> msg) {
+    public void preRestart(Throwable cause, Optional<Object> msg) {
       // do not kill all children, which is the default here
     }
   }

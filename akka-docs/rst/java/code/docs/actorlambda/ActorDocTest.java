@@ -12,8 +12,6 @@ import akka.testkit.TestEvent;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import docs.AbstractJavaTest;
-import scala.PartialFunction;
-import scala.runtime.BoxedUnit;
 import static docs.actorlambda.Messages.Swap.Swap;
 import static docs.actorlambda.Messages.*;
 import static akka.japi.Util.immutableSeq;
@@ -25,6 +23,7 @@ import java.util.concurrent.CompletionStage;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import akka.testkit.TestActors;
 import akka.dispatch.Mapper;
@@ -287,7 +286,7 @@ public class ActorDocTest extends AbstractJavaTest {
     public void preStart() {
     }
   
-    public void preRestart(Throwable reason, scala.Option<Object> message) {
+    public void preRestart(Throwable reason, Optional<Object> message) {
       for (ActorRef each : getContext().getChildren()) {
         getContext().unwatch(each);
         getContext().stop(each);
@@ -302,6 +301,7 @@ public class ActorDocTest extends AbstractJavaTest {
     public void postStop() {
     }
     //#lifecycle-callbacks
+    
   }
   
   public static class Hook extends AbstractActor {
@@ -724,12 +724,12 @@ public class ActorDocTest extends AbstractJavaTest {
     @Override
     public Receive initialReceive() {
       return receiveBuilder()
-        .match(ActorIdentity.class, id -> id.getRef() != null, id -> {
-          ActorRef ref = id.getRef();
+        .match(ActorIdentity.class, id -> id.getActorRef().isPresent(), id -> {
+          ActorRef ref = id.getActorRef().get();
           getContext().watch(ref);
           getContext().become(active(ref));
         })
-        .match(ActorIdentity.class, id -> id.getRef() == null, id -> {
+        .match(ActorIdentity.class, id -> !id.getActorRef().isPresent(), id -> {
           getContext().stop(self());
         })
         .build();
