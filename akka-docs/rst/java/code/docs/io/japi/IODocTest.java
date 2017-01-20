@@ -54,7 +54,7 @@ public class IODocTest extends AbstractJavaTest {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(Bound.class, msg -> {
           manager.tell(msg, self());
@@ -80,7 +80,7 @@ public class IODocTest extends AbstractJavaTest {
   //#simplistic-handler
   public class SimplisticHandler extends AbstractActor {
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(Received.class, msg -> {
           final ByteString data = msg.data();
@@ -115,7 +115,7 @@ public class IODocTest extends AbstractJavaTest {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(CommandFailed.class, msg -> {
           listener.tell("failed", self());

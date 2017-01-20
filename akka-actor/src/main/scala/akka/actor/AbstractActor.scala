@@ -193,12 +193,12 @@ abstract class AbstractActor extends Actor {
 
   /**
    * An actor has to define its initial receive behavior by implementing
-   * the `initialReceive` method.
+   * the `createReceive` method.
    */
-  def initialReceive(): AbstractActor.Receive
+  def createReceive(): AbstractActor.Receive
 
   override def receive: PartialFunction[Any, Unit] =
-    initialReceive().onMessage.asInstanceOf[PartialFunction[Any, Unit]]
+    createReceive().onMessage.asInstanceOf[PartialFunction[Any, Unit]]
 
   /**
    * Convenience factory of the `ReceiveBuilder`.
@@ -209,8 +209,8 @@ abstract class AbstractActor extends Actor {
 
 abstract class UntypedAbstractActor extends AbstractActor {
 
-  final override def initialReceive(): AbstractActor.Receive =
-    throw new UnsupportedOperationException("initialReceive should not be used by UntypedAbstractActor")
+  final override def createReceive(): AbstractActor.Receive =
+    throw new UnsupportedOperationException("createReceive should not be used by UntypedAbstractActor")
 
   override def receive: PartialFunction[Any, Unit] = { case msg ⇒ onReceive(msg) }
 

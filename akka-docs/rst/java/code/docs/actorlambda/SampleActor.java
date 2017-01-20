@@ -18,7 +18,7 @@ public class SampleActor extends AbstractActor {
     .build();
 
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder()
       .match(Double.class, d -> {
         sender().tell(d.isNaN() ? 0 : d, self());

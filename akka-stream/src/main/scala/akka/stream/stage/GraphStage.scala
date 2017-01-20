@@ -128,7 +128,7 @@ object GraphStageLogic {
   final class StageActor(
     materializer:     ActorMaterializer,
     getAsyncCallback: StageActorRef.Receive ⇒ AsyncCallback[(ActorRef, Any)],
-    initialReceive:   StageActorRef.Receive) {
+    createReceive:    StageActorRef.Receive) {
 
     private val callback = getAsyncCallback(internalReceive)
     private def cell = materializer.supervisor match {
@@ -155,7 +155,7 @@ object GraphStageLogic {
     def ref: ActorRef = functionRef
 
     @volatile
-    private[this] var behaviour = initialReceive
+    private[this] var behaviour = createReceive
 
     /** INTERNAL API */
     private[akka] def internalReceive(pack: (ActorRef, Any)): Unit = {

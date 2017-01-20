@@ -323,22 +323,20 @@ abstract class AbstractPersistentActor extends AbstractActor with PersistentActo
    *
    * @see [[Recovery]]
    */
-  def defineReceiveRecover(): AbstractActor.Receive
+  def createReceiveRecover(): AbstractActor.Receive
 
-  @deprecated("Use defineReceiveRecover instead", since = "2.5.0")
-  def receiveRecover: Receive = defineReceiveRecover().onMessage.asInstanceOf[Receive]
+  override final def receiveRecover: Receive = createReceiveRecover().onMessage.asInstanceOf[Receive]
 
   /**
-   * Command handler. Typically validates commands against current state (and/or by
-   * communication with other actors). On successful validation, one or more events are
-   * derived from a command and these events are then persisted by calling `persist`.
+   * An persistent actor has to define its initial receive behavior by implementing
+   * the `createReceive` method, also known as the command handler. Typically
+   * validates commands against current state (and/or by communication with other actors).
+   * On successful validation, one or more events are derived from a command and
+   * these events are then persisted by calling `persist`.
    */
-  def defineReceiveCommand(): AbstractActor.Receive
+  override def createReceive(): AbstractActor.Receive
 
-  @deprecated("Use defineReceiveCommand instead", since = "2.5.0")
-  override def receiveCommand: Receive = defineReceiveCommand().onMessage.asInstanceOf[Receive]
-
-  def initialReceive(): AbstractActor.Receive = defineReceiveCommand()
+  override final def receiveCommand: Receive = createReceive().onMessage.asInstanceOf[Receive]
 
   /**
    * Java API: asynchronously persists `event`. On successful persistence, `handler` is called with the

@@ -18,7 +18,7 @@ public class GraduallyBuiltActor extends AbstractActor {
   private final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
 
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     ReceiveBuilder builder = ReceiveBuilder.create();
     
     builder.match(String.class, s -> {

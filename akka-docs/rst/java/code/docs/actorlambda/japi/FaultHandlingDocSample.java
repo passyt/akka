@@ -71,7 +71,7 @@ public class FaultHandlingDocSample {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return LoggingReceive.create(receiveBuilder().
         match(Progress.class, progress -> {
           log().info("Current progress: {} %", progress.percent);
@@ -135,7 +135,7 @@ public class FaultHandlingDocSample {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return LoggingReceive.create(receiveBuilder().
         matchEquals(Start, x -> progressListener == null, x -> {
           progressListener = sender();
@@ -264,7 +264,7 @@ public class FaultHandlingDocSample {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return LoggingReceive.create(receiveBuilder().
         match(Entry.class, entry -> entry.key.equals(key) && counter == null, entry -> {
           // Reply from Storage of the initial value, now we can create the Counter
@@ -348,7 +348,7 @@ public class FaultHandlingDocSample {
     }
     
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return LoggingReceive.create(receiveBuilder().
         match(UseStorage.class, useStorage -> {
           storage = useStorage.storage;
@@ -433,7 +433,7 @@ public class FaultHandlingDocSample {
     final DummyDB db = DummyDB.instance;
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return LoggingReceive.create(receiveBuilder().
         match(Store.class, store -> {
           db.save(store.entry.key, store.entry.value);

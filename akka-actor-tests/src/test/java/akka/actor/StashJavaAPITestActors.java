@@ -30,7 +30,7 @@ public class StashJavaAPITestActors {
       int count = 0;
 
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .match(Object.class, msg -> {
             count = testReceive(msg, count, getSender(), getSelf(), this);
@@ -43,7 +43,7 @@ public class StashJavaAPITestActors {
       int count = 0;
 
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .match(Object.class, msg -> {
             count = testReceive(msg, count, getSender(), getSelf(), this);
@@ -56,7 +56,7 @@ public class StashJavaAPITestActors {
       int count = 0;
 
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .match(Object.class, msg -> {
             count = testReceive(msg, count, getSender(), getSelf(), this);

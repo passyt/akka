@@ -70,7 +70,7 @@ public class FaultHandlingTest extends AbstractJavaTest {
     //#strategy
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(Props.class, props -> {
           sender().tell(getContext().actorOf(props), self());
@@ -101,7 +101,7 @@ public class FaultHandlingTest extends AbstractJavaTest {
     //#strategy2
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(Props.class, props -> {
           sender().tell(getContext().actorOf(props), self());
@@ -123,7 +123,7 @@ public class FaultHandlingTest extends AbstractJavaTest {
     int state = 0;
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(Exception.class, exception -> { throw exception; })
         .match(Integer.class, i -> state = i)

@@ -35,7 +35,7 @@ public class InitializationDocTest extends AbstractJavaTest {
   static public class PreStartInitExample extends AbstractActor {
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return AbstractActor.emptyBehavior();
     }
 
@@ -69,7 +69,7 @@ public class InitializationDocTest extends AbstractJavaTest {
 
     //#messageInit
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .matchEquals("init", m1 -> {
           initializeMe = "Up and running";
@@ -94,7 +94,7 @@ public class InitializationDocTest extends AbstractJavaTest {
 
   public static class GenericActor extends AbstractActor {
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .matchUnchecked(GenericMessage.class, (GenericMessage<String> msg) -> {
           GenericMessage<String> message = msg;
@@ -106,7 +106,7 @@ public class InitializationDocTest extends AbstractJavaTest {
 
   static class GenericActorWithPredicate extends AbstractActor {
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       FI.TypedPredicate<GenericMessage<String>> typedPredicate = s -> !s.value.isEmpty();
 
       return receiveBuilder()

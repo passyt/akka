@@ -163,7 +163,7 @@ object MiMa extends AutoPlugin {
       //#21717 Improvements to AbstractActor API
       FilterAnyProblemStartingWith("akka.japi.pf.ReceiveBuilder"),
       ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.AbstractActor.receive"),
-      ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.actor.AbstractActor.initialReceive"),
+      ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.actor.AbstractActor.createReceive"),
       ProblemFilters.exclude[MissingClassProblem]("akka.actor.AbstractActorContext"),
       ProblemFilters.exclude[IncompatibleResultTypeProblem]("akka.actor.AbstractActor.getContext"),
       ProblemFilters.exclude[IncompatibleResultTypeProblem]("akka.actor.AbstractActor.emptyBehavior"),
@@ -171,8 +171,8 @@ object MiMa extends AutoPlugin {
       ProblemFilters.exclude[MissingTypesProblem]("akka.actor.ActorCell"),
       ProblemFilters.exclude[MissingTypesProblem]("akka.routing.RoutedActorCell"),
       ProblemFilters.exclude[MissingTypesProblem]("akka.routing.ResizablePoolCell"),
-      ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.AbstractPersistentActor.defineReceiveRecover"),
-      ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.AbstractPersistentActor.defineReceiveCommand"),        
+      ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.AbstractPersistentActor.createReceiveRecover"),
+      ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.AbstractPersistentActor.createReceive"),        
         
       // #21423 removal of deprecated stages (in 2.5.x)
       ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.javadsl.Source.transform"),

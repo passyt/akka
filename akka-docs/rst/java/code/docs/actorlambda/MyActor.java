@@ -16,7 +16,7 @@ public class MyActor extends AbstractActor {
   private final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
 
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder()
       .match(String.class, s -> {
         log.info("Received String message: {}", s);

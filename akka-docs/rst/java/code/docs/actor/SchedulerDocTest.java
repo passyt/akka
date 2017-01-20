@@ -54,7 +54,7 @@ public class SchedulerDocTest extends AbstractJavaTest {
     //#schedule-recurring
     class Ticker extends AbstractActor {
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .matchEquals("Tick", m -> {
             // Do someting

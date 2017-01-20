@@ -62,7 +62,7 @@ public class EchoHandler extends AbstractActor {
   }
   
   @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return writing;
     }
 

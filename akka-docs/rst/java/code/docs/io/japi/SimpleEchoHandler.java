@@ -41,7 +41,7 @@ public class SimpleEchoHandler extends AbstractActor {
   }
 
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder()
       .match(Received.class, msg -> {
         final ByteString data = msg.data();

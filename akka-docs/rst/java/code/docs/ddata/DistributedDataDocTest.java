@@ -66,7 +66,7 @@ public class DistributedDataDocTest extends AbstractJavaTest {
     final Key<Flag> activeFlagKey = FlagKey.create("active");
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       ReceiveBuilder b = receiveBuilder();
       
       b.matchEquals("demonstrate update", msg -> {
@@ -120,7 +120,7 @@ public class DistributedDataDocTest extends AbstractJavaTest {
     final Key<PNCounter> counter1Key = PNCounterKey.create("counter1");
     
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(String.class, a -> a.equals("increment"), a -> {
           // incoming command to increase the counter
@@ -157,7 +157,7 @@ public class DistributedDataDocTest extends AbstractJavaTest {
       final Key<Flag> activeFlagKey = FlagKey.create("active");
       
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         ReceiveBuilder b = receiveBuilder();
           
         b.matchEquals("demonstrate get", msg -> {
@@ -219,7 +219,7 @@ public class DistributedDataDocTest extends AbstractJavaTest {
       final Key<PNCounter> counter1Key = PNCounterKey.create("counter1");
       
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .match(String.class, a -> a.equals("get-count"), a -> {
             // incoming request to retrieve current value of the counter
@@ -260,7 +260,7 @@ public class DistributedDataDocTest extends AbstractJavaTest {
     BigInteger currentValue = BigInteger.valueOf(0);
     
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(Changed.class, a -> a.key().equals(counter1Key), a -> {
           Changed<PNCounter> g = a;
@@ -292,7 +292,7 @@ public class DistributedDataDocTest extends AbstractJavaTest {
     final Key<ORSet<String>> set2Key = ORSetKey.create("set2");
     
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .matchEquals("demonstrate delete", msg -> {
 

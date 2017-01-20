@@ -76,7 +76,7 @@ public class ActorPublisherDocTest extends AbstractJavaTest {
     private final List<JobManagerProtocol.Job> buf = new ArrayList<>();
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(JobManagerProtocol.Job.class, job -> buf.size() == MAX_BUFFER_SIZE, job -> {
           sender().tell(JobManagerProtocol.JobDenied, self());

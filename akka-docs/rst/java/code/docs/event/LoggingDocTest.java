@@ -82,7 +82,7 @@ public class LoggingDocTest extends AbstractJavaTest {
 
   static class Listener extends AbstractActor {
     @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .match(Jazz.class, msg -> 
             System.out.printf("%s is listening to: %s%n", self().path().name(), msg)
@@ -166,7 +166,7 @@ public class LoggingDocTest extends AbstractJavaTest {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .matchEquals("test", msg ->
           log.info("Received test")
@@ -186,7 +186,7 @@ public class LoggingDocTest extends AbstractJavaTest {
       final DiagnosticLoggingAdapter log = Logging.getLogger(this);
 
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .matchAny(msg -> {
             Map<String, Object> mdc;
@@ -208,7 +208,7 @@ public class LoggingDocTest extends AbstractJavaTest {
   //#my-event-listener
   class MyEventListener extends AbstractActor {
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(InitializeLogger.class, msg -> {
           sender().tell(Logging.loggerInitialized(), self());
@@ -234,7 +234,7 @@ public class LoggingDocTest extends AbstractJavaTest {
   //#deadletter-actor
   public class DeadLetterActor extends AbstractActor {
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(DeadLetter.class, msg -> {
           System.out.println(msg);

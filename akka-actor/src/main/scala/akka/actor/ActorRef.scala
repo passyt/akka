@@ -69,7 +69,7 @@ object ActorRef {
  *   // this child will be destroyed and re-created upon restart by default
  *   final ActorRef other = getContext().actorOf(Props.create(OtherActor.class), "childName");
  *   @Override
- *   public Receive initialReceive() {
+ *   public Receive createReceive() {
  *     return receiveBuilder()
  *       .match(Request1.class, msg ->
  *         // uses this actor as sender reference, reply goes to us

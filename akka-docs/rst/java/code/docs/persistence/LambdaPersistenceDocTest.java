@@ -65,13 +65,13 @@ public class LambdaPersistenceDocTest {
       //#persistence-id-override
 
       @Override
-      public Receive defineReceiveCommand() {
+      public Receive createReceive() {
         return receiveBuilder().
           match(String.class, cmd -> {/* ... */}).build();
       }
 
       @Override
-      public Receive defineReceiveRecover() {
+      public Receive createReceiveRecover() {
         return receiveBuilder().
             match(String.class, evt -> {/* ... */}).build();
       }
@@ -85,7 +85,7 @@ public class LambdaPersistenceDocTest {
         return "my-stable-persistence-id";
       }
 
-      @Override public Receive defineReceiveRecover() {
+      @Override public Receive createReceiveRecover() {
         return receiveBuilder().
           match(RecoveryCompleted.class, r -> {
             // perform init after recovery, before any other messages
@@ -94,7 +94,7 @@ public class LambdaPersistenceDocTest {
           match(String.class, this::handleEvent).build();
       }
 
-      @Override public Receive defineReceiveCommand() {
+      @Override public Receive createReceive() {
         return receiveBuilder().
           match(String.class, s -> s.equals("cmd"),
             s -> persist("evt", this::handleEvent)).build();
@@ -188,7 +188,7 @@ public class LambdaPersistenceDocTest {
         }
 
         @Override
-        public Receive defineReceiveCommand() {
+        public Receive createReceive() {
           return receiveBuilder().
             match(String.class, s -> {
               persist(new MsgSent(s), evt -> updateState(evt));
@@ -200,7 +200,7 @@ public class LambdaPersistenceDocTest {
         }
 
         @Override
-        public Receive defineReceiveRecover() {
+        public Receive createReceiveRecover() {
           return receiveBuilder().
               match(Object.class, evt -> updateState(evt)).build();
         }
@@ -218,7 +218,7 @@ public class LambdaPersistenceDocTest {
 
       class MyDestination extends AbstractActor {
         @Override
-        public Receive initialReceive() {
+        public Receive createReceive() {
           return receiveBuilder()
             .match(Msg.class, msg -> {
               // ...
@@ -237,7 +237,7 @@ public class LambdaPersistenceDocTest {
       //#save-snapshot
       private Object state;
 
-      @Override public Receive defineReceiveCommand() {
+      @Override public Receive createReceive() {
         return receiveBuilder().
           match(String.class, s -> s.equals("snap"),
             s -> saveSnapshot(state)).
@@ -256,7 +256,7 @@ public class LambdaPersistenceDocTest {
         return "persistence-id";
       }
 
-      @Override public Receive defineReceiveRecover() {
+      @Override public Receive createReceiveRecover() {
         return receiveBuilder().
           match(RecoveryCompleted.class, r -> {/* ...*/}).build();
       }
@@ -280,7 +280,7 @@ public class LambdaPersistenceDocTest {
       //#snapshot-offer
       private Object state;
 
-      @Override public Receive defineReceiveRecover() {
+      @Override public Receive createReceiveRecover() {
         return receiveBuilder().
           match(SnapshotOffer.class, s -> {
             state = s.snapshot();
@@ -294,7 +294,7 @@ public class LambdaPersistenceDocTest {
         return "persistence-id";
       }
 
-      @Override public Receive defineReceiveCommand() {
+      @Override public Receive createReceive() {
         return receiveBuilder().
           match(String.class, s -> {/* ...*/}).build();
       }
@@ -306,7 +306,7 @@ public class LambdaPersistenceDocTest {
         getContext().actorOf(Props.create(MyPersistentActor.class));
 
         @Override
-        public Receive initialReceive() {
+        public Receive createReceive() {
           return receiveBuilder()  
             .match(Object.class, o -> {/* ... */})
             .build();
@@ -333,12 +333,12 @@ public class LambdaPersistenceDocTest {
         });
       }
 
-      @Override public Receive defineReceiveRecover() {
+      @Override public Receive createReceiveRecover() {
         return receiveBuilder().
           match(String.class, this::handleCommand).build();
       }
 
-      @Override public Receive defineReceiveCommand() {
+      @Override public Receive createReceive() {
         return receiveBuilder().
           match(String.class, this::handleCommand).build();
       }
@@ -385,12 +385,12 @@ public class LambdaPersistenceDocTest {
         });
       }
 
-      @Override public Receive defineReceiveRecover() {
+      @Override public Receive createReceiveRecover() {
         return receiveBuilder().
           match(String.class, this::handleCommand).build();
       }
 
-      @Override public Receive defineReceiveCommand() {
+      @Override public Receive createReceive() {
         return receiveBuilder().
           match(String.class, this::handleCommand).build();
       }
@@ -426,12 +426,12 @@ public class LambdaPersistenceDocTest {
         return "my-stable-persistence-id";
       }
 
-      @Override public Receive defineReceiveCommand() {
+      @Override public Receive createReceive() {
         return receiveBuilder().matchAny(event -> {}).build();
       }
 
       //#nested-persist-persist
-      @Override public Receive defineReceiveRecover() {
+      @Override public Receive createReceiveRecover() {
         final Procedure<String> replyToSender = event -> sender().tell(event, self());
 
         return receiveBuilder()
@@ -480,13 +480,13 @@ public class LambdaPersistenceDocTest {
       }
 
       @Override 
-      public Receive defineReceiveRecover() {
+      public Receive createReceiveRecover() {
         return receiveBuilder().matchAny(event -> {}).build();
       }
 
       //#nested-persistAsync-persistAsync
       @Override 
-      public Receive defineReceiveCommand() {
+      public Receive createReceive() {
           final Procedure<String> replyToSender = event -> sender().tell(event, self());
 
         return receiveBuilder()
@@ -543,7 +543,7 @@ public class LambdaPersistenceDocTest {
       }
 
       @Override
-      public Receive defineReceiveCommand() {
+      public Receive createReceive() {
         return receiveBuilder()
           .match(Shutdown.class, shutdown -> {
             getContext().stop(self());
@@ -556,7 +556,7 @@ public class LambdaPersistenceDocTest {
       }
 
       @Override
-      public Receive defineReceiveRecover() {
+      public Receive createReceiveRecover() {
         return receiveBuilder().matchAny(any -> {}).build();
       }
 

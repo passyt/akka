@@ -52,7 +52,7 @@ public class EchoManager extends AbstractActor {
   }
 
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder()
       .match(Bound.class, msg -> {
         log.info("listening on [{}]", msg.localAddress());

@@ -48,7 +48,7 @@ public class LambdaPersistencePluginDocTest {
       }
 
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .match(ActorIdentity.class, ai -> {
             if (ai.correlationId().equals(1)) {

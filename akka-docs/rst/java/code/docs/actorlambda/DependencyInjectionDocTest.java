@@ -32,7 +32,7 @@ public class DependencyInjectionDocTest extends AbstractJavaTest {
     }
     
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(String.class, msg -> {
           sender().tell(s, self());

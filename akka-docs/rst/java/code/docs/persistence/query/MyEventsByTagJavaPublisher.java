@@ -61,7 +61,7 @@ class MyEventsByTagJavaPublisher extends AbstractActorPublisher<EventEnvelope> {
   }
   
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder()
       .matchEquals(CONTINUE, (in) -> {
         query();

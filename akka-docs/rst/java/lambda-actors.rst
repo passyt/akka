@@ -612,9 +612,9 @@ Receive messages
 ================
 
 An actor has to define its initial receive behavior by implementing
-the :meth:`initialReceive` method in the :class:`AbstractActor`:
+the :meth:`createReceive` method in the :class:`AbstractActor`:
 
-.. includecode:: code/docs/actorlambda/ActorDocTest.java#initialReceive
+.. includecode:: code/docs/actorlambda/ActorDocTest.java#createReceive
 
 
 The return type is :class:`AbstractActor.Receive` that defines which messages your Actor can handle, 

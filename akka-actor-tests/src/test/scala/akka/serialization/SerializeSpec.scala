@@ -89,7 +89,7 @@ object SerializationTests {
   }
 
   class FooAbstractActor extends AbstractActor {
-    override def initialReceive(): AbstractActor.Receive =
+    override def createReceive(): AbstractActor.Receive =
       receiveBuilder().build()
   }
 

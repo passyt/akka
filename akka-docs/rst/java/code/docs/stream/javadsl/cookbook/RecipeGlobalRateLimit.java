@@ -92,7 +92,7 @@ public class RecipeGlobalRateLimit extends RecipeTest {
     }
     
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return open();
     }
 

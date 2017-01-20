@@ -29,7 +29,7 @@ public class IODocTest {
     ActorRef listener = self();
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .matchEquals("connect", msg -> {
           //#manager

@@ -260,7 +260,7 @@ public class IntegrationDocTest extends AbstractJavaTest {
     }
     
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(Save.class, s -> {
           probe.tell(s.tweet.author.handle, ActorRef.noSender());

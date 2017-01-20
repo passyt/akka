@@ -47,7 +47,7 @@ public class DangerousJavaActor extends AbstractActor {
   }
 
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder().
       match(String.class, m -> "is my middle name".equals(m), m -> {
         pipe(

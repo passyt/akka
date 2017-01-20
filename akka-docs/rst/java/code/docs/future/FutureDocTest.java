@@ -658,7 +658,7 @@ public class FutureDocTest extends AbstractJavaTest {
 
   public static class MyActor extends AbstractActor {
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(String.class, msg -> {
           sender().tell(msg.toUpperCase(), self());

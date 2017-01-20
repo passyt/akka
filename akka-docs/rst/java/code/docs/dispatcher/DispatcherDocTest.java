@@ -137,7 +137,7 @@ public class DispatcherDocTest extends AbstractJavaTest {
       }
 
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder().matchAny(message -> {
           log.info(message.toString());
         }).build();
@@ -179,7 +179,7 @@ public class DispatcherDocTest extends AbstractJavaTest {
       }
 
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder().matchAny(message -> {
           log.info(message.toString());
         }).build();
@@ -242,7 +242,7 @@ public class DispatcherDocTest extends AbstractJavaTest {
     RequiresMessageQueue<MyUnboundedJMessageQueueSemantics> {
     //#require-mailbox-on-actor
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return AbstractActor.emptyBehavior();
     }
     //#require-mailbox-on-actor

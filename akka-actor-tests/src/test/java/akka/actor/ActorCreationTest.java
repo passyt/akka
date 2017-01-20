@@ -96,7 +96,7 @@ public class ActorCreationTest extends JUnitSuite {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder().build();
     }
 

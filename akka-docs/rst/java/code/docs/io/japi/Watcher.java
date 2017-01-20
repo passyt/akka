@@ -22,7 +22,7 @@ public class Watcher extends AbstractActor {
   }
 
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder()
       .match(Watch.class, msg -> {
         getContext().watch(msg.target);

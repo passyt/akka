@@ -74,7 +74,7 @@ public class SettingsExtensionDocTest extends AbstractJavaTest {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return AbstractActor.emptyBehavior();
     }
   //#extension-usage-actor

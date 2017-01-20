@@ -15,7 +15,7 @@ did some small, but important, improvements to the API that will require some me
 changes of your source code.
 
 Previously the receive behavior was set with the ``receive`` method, but now an actor has
-to define its initial receive behavior by implementing the ``initialReceive`` method in 
+to define its initial receive behavior by implementing the ``createReceive`` method in 
 the ``AbstractActor``. This has the advantages:
 
 * It gives a clear entry point of what to implement. The compiler tells you that the
@@ -23,14 +23,14 @@ the ``AbstractActor``. This has the advantages:
 * It's impossible to forget to set the receive behavior.
 * It's not possible to define the receive behavior more than once.
 
-The return type of ``initialReceive`` is ``AbstractActor.Receive``. It defines which messages
+The return type of ``createReceive`` is ``AbstractActor.Receive``. It defines which messages
 your Actor can handle, along with the implementation of how the messages should be processed.
 You can build such behavior with a builder named ``ReceiveBuilder``.
 
 ``AbstractActor.Receive`` can also be used in ``getContext().become``.
 
 The old ``receive`` method exposed Scala's ``PartialFunction`` and ``BoxedUnit`` in the signature,
-which are unnecessary concepts for newcomers to learn. The new ``initialReceive`` requires no 
+which are unnecessary concepts for newcomers to learn. The new ``createReceive`` requires no 
 additional imports.
 
 Note that The ``Receive`` can still be implemented in other ways than using the ``ReceiveBuilder``
@@ -38,7 +38,7 @@ since it in the end is just a wrapper around a Scala ``PartialFunction``. For ex
 implement an adapter to `Javaslang Pattern Matching DSL <http://www.javaslang.io/javaslang-docs/#_pattern_matching>`_.
 
 The mechanical source code change for migration to the new ``AbstractActor`` is to implement the
-``initialReceive`` instead of calling ``receive`` (compiler will tell that this is missing).
+``createReceive`` instead of calling ``receive`` (compiler will tell that this is missing).
 
 Old::
 
@@ -61,7 +61,7 @@ New::
   
   public class SomeActor extends AbstractActor {
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(String.class, s -> System.out.println(s.toLowerCase()))
         .build();
@@ -69,7 +69,7 @@ New::
   }
   
 See :ref:`actors-receive-java` documentation for more advice about how to implement
-``initialReceive``.
+``createReceive``.
 
 A few new methods have been added with deprecation of the old. Worth noting is ``preRestart``.
 
@@ -90,8 +90,8 @@ New::
 AbstractPersistentActor
 -----------------------
 
-Similar change as described above for ``AbstractActor`` is needed for ``AbstractPersistentActor``. Implement ``defineReceiveRecover``
-instead of ``receiveRecover``, and ``defineReceiveCommand`` instead of ``receiveCommand``.
+Similar change as described above for ``AbstractActor`` is needed for ``AbstractPersistentActor``. Implement ``createReceiveRecover``
+instead of ``receiveRecover``, and ``createReceive`` instead of ``receiveCommand``.
 
 Old::
 
@@ -110,13 +110,13 @@ Old::
 New::
 
       @Override
-      public Receive defineReceiveCommand() {
+      public Receive createReceive() {
         return receiveBuilder().
           match(String.class, cmd -> {/* ... */}).build();
       }
 
       @Override
-      public Receive defineReceiveRecover() {
+      public Receive createReceiveRecover() {
         return receiveBuilder().
             match(String.class, evt -> {/* ... */}).build();
       }
@@ -167,7 +167,7 @@ New::
   }
   
 It's recommended to migrate ``UntypedActor`` to ``AbstractActor`` by implementing
-``initialReceive`` instead of ``onMessage``.
+``createReceive`` instead of ``onMessage``.
 
 Old::
 
@@ -192,7 +192,7 @@ New::
   
   public class SomeActor extends AbstractActor {
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(String.class, s -> {
           System.out.println(s.toLowerCase());
@@ -202,7 +202,7 @@ New::
   }
 
 See :ref:`actors-receive-java` documentation for more advice about how to implement
-``initialReceive``.
+``createReceive``.
 
 Similar with ``UntypedActorWithStash``, ``UntypedPersistentActor``, and
 ``UntypedPersistentActorWithAtLeastOnceDelivery``.

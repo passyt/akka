@@ -7,7 +7,7 @@ import org.apache.camel.ProducerTemplate;
 
 public class RequestBodyActor extends AbstractActor {
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder()
       .matchAny(message -> {
         Camel camel = CamelExtension.get(getContext().system());

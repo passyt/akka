@@ -145,14 +145,14 @@ public class ClusterShardingTest {
     }
 
     @Override
-    public Receive defineReceiveRecover() {
+    public Receive createReceiveRecover() {
       return receiveBuilder()
           .match(CounterChanged.class, this::updateState)
           .build();
     }
 
     @Override
-    public Receive defineReceiveCommand() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(Get.class, this::receiveGet)
         .matchEquals(CounterOp.INCREMENT, msg -> receiveIncrement())
@@ -201,7 +201,7 @@ public class ClusterShardingTest {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(Object.class, msg -> counter.forward(msg, getContext()))
         .build();

@@ -166,7 +166,7 @@ public class ActorSubscriberDocTest extends AbstractJavaTest {
       }
       
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .match(ActorSubscriberMessage.OnNext.class, on -> on.element() instanceof WorkerPoolProtocol.Msg,
             onNext -> {
@@ -197,7 +197,7 @@ public class ActorSubscriberDocTest extends AbstractJavaTest {
 
     static class Worker extends AbstractActor {
       @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .match(WorkerPoolProtocol.Work.class, work -> {
             // ...

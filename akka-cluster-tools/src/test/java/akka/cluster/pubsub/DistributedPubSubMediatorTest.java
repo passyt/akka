@@ -77,7 +77,7 @@ public class DistributedPubSubMediatorTest extends JUnitSuite {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(String.class, msg ->
           log.info("Got: {}", msg))
@@ -97,7 +97,7 @@ public class DistributedPubSubMediatorTest extends JUnitSuite {
       DistributedPubSub.get(getContext().system()).mediator();
 
     @Override
-      public Receive initialReceive() {
+      public Receive createReceive() {
         return receiveBuilder()
           .match(String.class, in -> {
             String out = in.toUpperCase();
@@ -122,7 +122,7 @@ public class DistributedPubSubMediatorTest extends JUnitSuite {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(String.class, msg ->
           log.info("Got: {}", msg))
@@ -143,7 +143,7 @@ public class DistributedPubSubMediatorTest extends JUnitSuite {
       DistributedPubSub.get(getContext().system()).mediator();
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(String.class, in -> {
           String out = in.toUpperCase();

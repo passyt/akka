@@ -44,7 +44,7 @@ public class DataBot extends AbstractActor {
   
   @SuppressWarnings("unchecked")
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder()
       .match(String.class, a -> a.equals(TICK), a -> receiveTick())
       .match(Changed.class, c -> c.key().equals(dataKey), c -> receiveChanged((Changed<ORSet<String>>) c))

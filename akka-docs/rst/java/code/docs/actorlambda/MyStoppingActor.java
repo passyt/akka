@@ -14,7 +14,7 @@ public class MyStoppingActor extends AbstractActor {
   // ... creation of child ...
 
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder()
       .matchEquals("interrupt-child", m ->
         getContext().stop(child)

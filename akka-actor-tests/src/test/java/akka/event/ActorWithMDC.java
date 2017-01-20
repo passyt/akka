@@ -12,7 +12,7 @@ public class ActorWithMDC extends AbstractActor {
     private final DiagnosticLoggingAdapter logger = Logging.getLogger(this);
 
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder().match(Log.class, this::receiveLog).build();
   }
 

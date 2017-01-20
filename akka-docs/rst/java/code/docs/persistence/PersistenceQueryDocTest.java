@@ -454,7 +454,7 @@ public class PersistenceQueryDocTest {
     }
     
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .matchAny(message -> {
           state = updateState(state, message);

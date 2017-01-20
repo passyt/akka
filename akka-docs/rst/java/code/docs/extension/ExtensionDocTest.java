@@ -59,7 +59,7 @@ public class ExtensionDocTest extends AbstractJavaTest {
   //#extension-usage-actor
   public class MyActor extends AbstractActor {
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .matchAny(msg -> {
           // typically you would use static import of the

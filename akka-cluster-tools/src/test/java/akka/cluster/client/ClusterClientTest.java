@@ -78,7 +78,7 @@ public class ClusterClientTest extends JUnitSuite {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(ContactPoints.class, msg -> {
           contactPoints.addAll(msg.getContactPoints());
@@ -113,7 +113,7 @@ public class ClusterClientTest extends JUnitSuite {
     }
 
     @Override
-    public Receive initialReceive() {
+    public Receive createReceive() {
       return receiveBuilder()
         .match(ClusterClients.class, msg -> {
           clusterClients.addAll(msg.getClusterClients());

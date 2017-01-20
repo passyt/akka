@@ -36,7 +36,7 @@ public class TellPatternJavaActor extends AbstractActor {
 
   //#circuit-breaker-tell-pattern
   @Override
-  public Receive initialReceive() {
+  public Receive createReceive() {
     return receiveBuilder()
       .match(String.class, payload -> "call".equals(payload) && breaker.isClosed(), payload -> 
         target.tell("message", self())
