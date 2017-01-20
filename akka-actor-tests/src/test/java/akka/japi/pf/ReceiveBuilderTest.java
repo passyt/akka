@@ -120,6 +120,48 @@ public class ReceiveBuilderTest extends JUnitSuite {
     assertFalse(rcv.onMessage().isDefinedAt(42));
   }
 
+  private void handleMsg(Msg msg) {
+    result("match Msg");
+  }
+
+  private void handleMsg(Msg1 msg) {
+    result("match Msg1");
+  }
+
+  private void handleMsg(Msg2 msg) {
+    result("match Msg2");
+  }
+
+  @Test
+  public void shouldMatchDelegatingToSpecificMethod() {
+    Receive rcv = ReceiveBuilder.create()
+        .match(Msg1.class, this::handleMsg)
+        .match(Msg2.class, this::handleMsg)
+        .build();
+    assertTrue(rcv.onMessage().isDefinedAt(new Msg1()));
+    rcv.onMessage().apply(new Msg1());
+    assertEquals("match Msg1", result());
+
+    assertTrue(rcv.onMessage().isDefinedAt(new Msg2("foo")));
+    rcv.onMessage().apply(new Msg2("foo"));
+    assertEquals("match Msg2", result());
+  }
+
+  @Test
+  public void shouldMatchDelegatingToGeneralMethod() {
+    Receive rcv = ReceiveBuilder.create()
+        .match(Msg1.class, this::handleMsg)
+        .match(Msg.class, this::handleMsg)
+        .build();
+    assertTrue(rcv.onMessage().isDefinedAt(new Msg1()));
+    rcv.onMessage().apply(new Msg1());
+    assertEquals("match Msg1", result());
+
+    assertTrue(rcv.onMessage().isDefinedAt(new Msg2("foo")));
+    rcv.onMessage().apply(new Msg2("foo"));
+    assertEquals("match Msg", result()); // note that this doesn't go to "match Msg2"
+  }
+
   @Test
   public void shouldMatchByPredicate() {
     Receive rcv = ReceiveBuilder.create()
