@@ -445,7 +445,7 @@ trait Actor {
   type Receive = Actor.Receive
 
   /**
-   * Stores the context for this actor, including self, and sender.
+   * Scala API: Stores the context for this actor, including self, and sender.
    * It is implicit to support operations such as `forward`.
    *
    * WARNING: Only valid within the Actor itself, so do not close over it and
@@ -487,7 +487,7 @@ trait Actor {
   final def sender(): ActorRef = context.sender()
 
   /**
-   * This defines the initial actor behavior, it must return a partial function
+   * Scala API: This defines the initial actor behavior, it must return a partial function
    * with the actor logic.
    */
   //#receive
@@ -561,7 +561,7 @@ trait Actor {
   //#lifecycle-hooks
 
   /**
-   * User overridable callback: '''By default it disposes of all children and then calls `postStop()`.'''
+   * Scala API: User overridable callback: '''By default it disposes of all children and then calls `postStop()`.'''
    * @param reason the Throwable that caused the restart to happen
    * @param message optionally the current message the actor processed when failing, if applicable
    * <p/>

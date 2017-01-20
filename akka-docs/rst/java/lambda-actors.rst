@@ -646,7 +646,8 @@ That has benefits such as:
 * Java HotSpot has a better opportunity for making optimizations
 
 The ``Receive`` can be implemented in other ways than using the ``ReceiveBuilder`` since it in the
-end is just a wrapper around a Scala ``PartialFunction``. For example, one could implement an adapter
+end is just a wrapper around a Scala ``PartialFunction``. In Java, you can implement ``PartialFunction`` by
+extending ``AbstractPartialFunction``. For example, one could implement an adapter
 to `Javaslang Pattern Matching DSL <http://www.javaslang.io/javaslang-docs/#_pattern_matching>`_.
 
 If the validation of the ``ReceiveBuilder`` match logic turns out to be a bottleneck for some of your

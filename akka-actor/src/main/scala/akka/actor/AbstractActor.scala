@@ -20,7 +20,8 @@ object AbstractActor {
    * how the messages should be processed. You can build such behavior with the
    * [[akka.japi.pf.receivebuilder]] but it can be implemented in other ways than
    * using the `ReceiveBuilder` since it in the end is just a wrapper around a
-   * Scala `PartialFunction`.
+   * Scala `PartialFunction`. In Java, you can implement `PartialFunction` by
+   * extending `AbstractPartialFunction`.
    */
   final class Receive(val onMessage: PartialFunction[Any, BoxedUnit]) {
     /**
@@ -207,6 +208,15 @@ abstract class AbstractActor extends Actor {
   final def receiveBuilder(): ReceiveBuilder = ReceiveBuilder.create()
 }
 
+/**
+ * If the validation of the `ReceiveBuilder` match logic turns out to be a bottleneck for some of your
+ * actors you can consider to implement it at lower level by extending `UntypedAbstractActor` instead
+ * of `AbstractActor`. The partial functions created by the `ReceiveBuilder` consist of multiple lambda
+ * expressions for every match statement, where each lambda is referencing the code to be run. This is something
+ * that the JVM can have problems optimizing and the resulting code might not be as performant as the
+ * untyped version. When extending `UntypedAbstractActor` each message is received as an untyped
+ * `Object` and you have to inspect and cast it to the actual message type in other ways (instanceof checks).
+ */
 abstract class UntypedAbstractActor extends AbstractActor {
 
   final override def createReceive(): AbstractActor.Receive =
